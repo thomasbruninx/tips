@@ -37,7 +37,11 @@
   },
   "windows": {
     "allow_uac_elevation": false,
-    "prefer_program_files_x86": false
+    "prefer_program_files_x86": false,
+    "installer_icon_ico": "assets/appicon.ico"
+  },
+  "macos": {
+    "installer_icon_icns": "assets/appicon.icns"
   },
   "unix": {
     "allow_sudo_relaunch": false

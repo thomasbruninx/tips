@@ -34,12 +34,14 @@ class ClassicPanel(QFrame):
     def __init__(self, theme: UITheme, **kwargs) -> None:
         super().__init__(**kwargs)
         self.theme = theme
+        if not self.objectName():
+            self.setObjectName("ClassicPanel")
         self.setFrameShape(QFrame.Shape.Panel)
         self.setFrameShadow(QFrame.Shadow.Raised)
         self.setLineWidth(1)
         self.setMidLineWidth(1)
         self.setStyleSheet(
-            f"QFrame {{ background-color: {theme.panel_bg}; border: 1px solid {theme.border_dark}; }}"
+            f"QFrame#{self.objectName()} {{ background-color: {theme.panel_bg}; border: 1px solid {theme.border_dark}; }}"
         )
 
 
@@ -87,8 +89,9 @@ class ClassicHeader(ClassicPanel):
 
     def __init__(self, theme: UITheme, title: str, description: str, image_path: str | None = None, **kwargs) -> None:
         super().__init__(theme=theme, **kwargs)
+        self.setObjectName("ClassicHeaderPanel")
         self.setStyleSheet(
-            f"QFrame {{ background-color: {theme.panel_bg}; border: 1px solid {theme.border_dark}; }}"
+            f"QFrame#ClassicHeaderPanel {{ background-color: {theme.panel_bg}; border: 1px solid {theme.border_dark}; }}"
         )
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
@@ -143,7 +146,14 @@ class ClassicSidebar(QWidget):
         painter.drawRect(rect.adjusted(0, 0, -1, -1))
 
         if not self.pixmap.isNull():
-            painter.drawPixmap(rect, self.pixmap)
+            scaled = self.pixmap.scaled(
+                rect.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            x = rect.x() + (rect.width() - scaled.width()) // 2
+            y = rect.y() + (rect.height() - scaled.height()) // 2
+            painter.drawPixmap(x, y, scaled)
             return
 
         painter.setPen(Qt.GlobalColor.white)

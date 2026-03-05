@@ -145,6 +145,19 @@ Full schema: `installer_framework/config/schema.json`.
 }
 ```
 
+For packaged installer executable icons, use platform-specific keys:
+
+```json
+"windows": {
+  "installer_icon_ico": "assets/appicon.ico"
+},
+"macos": {
+  "installer_icon_icns": "assets/appicon.icns"
+}
+```
+
+Build scripts resolve these paths relative to the JSON config file directory.
+
 ### Theme
 
 `theme` is optional; defaults are applied if omitted.
@@ -279,7 +292,7 @@ All scripts output to `dist/<platform>/`.
 ### Windows
 
 ```powershell
-pwsh ./build/build_windows.ps1
+pwsh ./build/build_windows.ps1 -ConfigPath examples/sample_installer.json
 ```
 
 Output: `dist/windows/tips-installer.exe`
@@ -295,16 +308,17 @@ Output: `dist/linux/tips-installer/` (onefolder)
 ### macOS
 
 ```bash
-./build/build_macos.sh
+./build/build_macos.sh examples/sample_installer.json
 ```
 
 Output: `dist/macos/tips-installer.app`
 
 ## PyQt6 + PyInstaller Troubleshooting
 
-- Ensure PyInstaller collects Qt modules/plugins:
-  - `--collect-submodules PyQt6`
-  - `--collect-data PyQt6`
+- Ensure required Qt modules are explicitly included:
+  - `--hidden-import PyQt6.QtCore`
+  - `--hidden-import PyQt6.QtGui`
+  - `--hidden-import PyQt6.QtWidgets`
   - `--hidden-import PyQt6.sip`
 - If startup fails with Qt plugin errors, inspect packaged `platforms` plugin files.
 - If assets are missing, verify `--add-data` paths for `examples` and `schema.json`.

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PyQt6.QtWidgets import QHBoxLayout, QPlainTextEdit, QWidget
+from PyQt6.QtWidgets import QPlainTextEdit
 
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicButton, ClassicCheckboxRow, ClassicGroupBox
+from installer_framework.ui.widgets.classic import ClassicCheckboxRow, ClassicGroupBox
 
 
 class LicenseStep(StepWidget):
@@ -25,18 +25,8 @@ class LicenseStep(StepWidget):
         group = ClassicGroupBox(theme=self.theme, title="License Agreement")
         group.content_layout.addWidget(self.license_view, 1)
 
-        button_row = QWidget()
-        button_layout = QHBoxLayout(button_row)
-        button_layout.setContentsMargins(0, 0, 0, 0)
-        button_layout.addStretch(1)
-        disagree = ClassicButton(theme=self.theme, text="Disagree")
-        disagree.setFixedWidth(100)
-        disagree.clicked.connect(lambda: self.wizard.cancel_install("License not accepted"))
-        button_layout.addWidget(disagree)
-
         self.main_layout.addWidget(group, 1)
         self.main_layout.addWidget(self.agree_row)
-        self.main_layout.addWidget(button_row)
 
     def _load_license_text(self) -> str:
         candidate = self.step_config.license_path or ""

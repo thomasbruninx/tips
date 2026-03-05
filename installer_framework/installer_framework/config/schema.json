@@ -170,7 +170,15 @@
       "type": "object",
       "properties": {
         "allow_uac_elevation": {"type": "boolean"},
-        "prefer_program_files_x86": {"type": "boolean"}
+        "prefer_program_files_x86": {"type": "boolean"},
+        "installer_icon_ico": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "macos": {
+      "type": "object",
+      "properties": {
+        "installer_icon_icns": {"type": "string"}
       },
       "additionalProperties": true
     },

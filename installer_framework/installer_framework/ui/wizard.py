@@ -71,8 +71,9 @@ class Wizard(QMainWindow):
         self.header_host.setFixedHeight(82)
 
         self.content_panel = ClassicPanel(theme=self.theme)
+        self.content_panel.setObjectName("WizardContentPanel")
         self.content_panel.setStyleSheet(
-            f"QFrame {{ background-color: {self.theme.content_bg}; border: 1px solid {self.theme.border_dark}; }}"
+            f"QFrame#WizardContentPanel {{ background-color: {self.theme.content_bg}; border: 1px solid {self.theme.border_dark}; }}"
         )
         content_layout = QVBoxLayout(self.content_panel)
         content_layout.setContentsMargins(metrics.padding, metrics.padding, metrics.padding, metrics.padding)

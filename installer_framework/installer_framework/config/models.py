@@ -123,6 +123,7 @@ class InstallerConfig:
     actions: list[ActionConfig]
     features: list[FeatureConfig] = field(default_factory=list)
     windows: dict[str, Any] = field(default_factory=dict)
+    macos: dict[str, Any] = field(default_factory=dict)
     unix: dict[str, Any] = field(default_factory=dict)
     shortcut: ShortcutSettings = field(default_factory=ShortcutSettings)
     upgrade: UpgradeSettings = field(default_factory=UpgradeSettings)
@@ -245,6 +246,7 @@ def installer_config_from_dict(data: dict[str, Any], source_root: Path | None = 
         actions=[_action_from_dict(action) for action in data.get("actions", [])],
         features=[_feature_from_dict(feature) for feature in data.get("features", [])],
         windows=dict(data.get("windows", {})),
+        macos=dict(data.get("macos", {})),
         unix=dict(data.get("unix", {})),
         shortcut=ShortcutSettings(**data.get("shortcut", {})),
         upgrade=UpgradeSettings(**data.get("upgrade", {})),
