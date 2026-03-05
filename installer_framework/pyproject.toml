@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "installer-framework"
+version = "0.1.0"
+description = "TIPS Installer Framework: JSON-driven cross-platform installer wizard"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "TIPS" }
+]
+dependencies = [
+  "kivy>=2.3.0",
+  "jsonschema>=4.0.0",
+  "packaging>=24.0",
+  "plyer>=2.1.0",
+]
+
+[project.optional-dependencies]
+windows = [
+  "pywin32>=306",
+  "winshell>=0.6"
+]
+
+dev = [
+  "pyinstaller>=6.0.0",
+]
+
+[project.scripts]
+tips-installer = "installer_framework.main:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["installer_framework*"]
+
+[tool.setuptools.package-data]
+installer_framework = ["config/schema.json"]

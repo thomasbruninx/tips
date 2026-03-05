@@ -1,0 +1,228 @@
+{
+  "product_id": "tips-demo-app",
+  "install_scope": "ask",
+  "branding": {
+    "productName": "TIPS Demo App",
+    "publisher": "TIPS",
+    "version": "1.0.0",
+    "logoPath": "assets/logo.png",
+    "windowIconPath": "assets/logo.png"
+  },
+  "theme": {
+    "style": "classic",
+    "assets": {
+      "sidebar_image_path": "assets/logo-white.png",
+      "header_image_path": "assets/logo.png"
+    },
+    "colors": {
+      "window_bg": "#ECE9D8",
+      "panel_bg": "#FFFFFF",
+      "text_primary": "#000000",
+      "border_light": "#FFFFFF",
+      "border_dark": "#7F7F7F",
+      "accent": "#0A246A"
+    },
+    "metrics": {
+      "window_width": 780,
+      "window_height": 560,
+      "sidebar_width": 164,
+      "padding": 10,
+      "button_height": 28
+    },
+    "typography": {
+      "font_name": "Tahoma",
+      "base_size": 14,
+      "title_size": 18
+    }
+  },
+  "windows": {
+    "allow_uac_elevation": false,
+    "prefer_program_files_x86": false
+  },
+  "unix": {
+    "allow_sudo_relaunch": false
+  },
+  "upgrade": {
+    "enabled": true,
+    "store_file": "install-info.json"
+  },
+  "features": [
+    {
+      "id": "core",
+      "label": "Core files",
+      "description": "Required runtime files",
+      "default": true
+    },
+    {
+      "id": "docs",
+      "label": "Offline documentation",
+      "description": "Installs local docs",
+      "default": true
+    },
+    {
+      "id": "desktop_shortcut",
+      "label": "Desktop shortcut",
+      "description": "Creates a desktop launcher",
+      "default": true
+    }
+  ],
+  "steps": [
+    {
+      "id": "welcome",
+      "type": "welcome",
+      "title": "Welcome to TIPS Demo Setup",
+      "description": "This wizard will install TIPS Demo App on your computer."
+    },
+    {
+      "id": "license",
+      "type": "license",
+      "title": "License Agreement",
+      "description": "Please review the license and accept to continue.",
+      "license_path": "assets/license.txt"
+    },
+    {
+      "id": "scope",
+      "type": "scope",
+      "title": "Install Scope",
+      "description": "Choose whether to install for this user or all users."
+    },
+    {
+      "id": "directory",
+      "type": "directory",
+      "title": "Installation Directory",
+      "description": "Select where the application should be installed.",
+      "fields": [
+        {
+          "id": "install_dir",
+          "type": "directory",
+          "label": "Install Directory",
+          "required": true,
+          "validators": ["dir_exists_or_create", "path_writable"]
+        }
+      ]
+    },
+    {
+      "id": "options",
+      "type": "options",
+      "title": "Feature Selection",
+      "description": "Select optional components.",
+      "fields": [
+        {
+          "id": "create_desktop_shortcut",
+          "type": "checkbox",
+          "label": "Create desktop shortcut",
+          "default": true
+        },
+        {
+          "id": "install_channel",
+          "type": "select",
+          "label": "Install channel",
+          "choices": ["stable", "beta"],
+          "default": "stable"
+        },
+        {
+          "id": "selected_features",
+          "type": "multiselect",
+          "label": "Features"
+        }
+      ]
+    },
+    {
+      "id": "credentials",
+      "type": "form",
+      "title": "Account Setup",
+      "description": "Provide initial account details.",
+      "fields": [
+        {
+          "id": "username",
+          "type": "text",
+          "label": "Username",
+          "required": true,
+          "regex": "^[a-zA-Z0-9_.-]{3,20}$",
+          "min_length": 3,
+          "max_length": 20
+        },
+        {
+          "id": "password",
+          "type": "password",
+          "label": "Password",
+          "required": true,
+          "min_length": 8,
+          "complexity": true
+        }
+      ]
+    },
+    {
+      "id": "ready",
+      "type": "ready",
+      "title": "Ready to Install",
+      "description": "Review your choices and click Install."
+    },
+    {
+      "id": "install",
+      "type": "install",
+      "title": "Installing",
+      "description": "Applying changes"
+    },
+    {
+      "id": "finish",
+      "type": "finish",
+      "title": "Setup Complete",
+      "description": "Installation finished"
+    }
+  ],
+  "actions": [
+    {
+      "type": "copy_files",
+      "items": [
+        {
+          "from": "assets/payload",
+          "to": "."
+        }
+      ],
+      "overwrite": true
+    },
+    {
+      "type": "create_shortcut",
+      "name": "TIPS Demo App",
+      "target_relative": "README.txt",
+      "desktop": true,
+      "start_menu": true
+    },
+    {
+      "type": "create_desktop_entry",
+      "id": "tips-demo-app",
+      "name": "TIPS Demo App",
+      "exec_relative": "README.txt",
+      "icon": ""
+    },
+    {
+      "type": "write_dotfile",
+      "file_name": "install-info.json"
+    },
+    {
+      "type": "write_registry",
+      "key_path": "Software\\TIPS\\tips-demo-app",
+      "value_name": "Version",
+      "value": "{version}"
+    },
+    {
+      "type": "write_registry",
+      "key_path": "Software\\TIPS\\tips-demo-app",
+      "value_name": "InstallDir",
+      "value": "{install_dir}"
+    },
+    {
+      "type": "write_registry",
+      "key_path": "Software\\TIPS\\tips-demo-app",
+      "value_name": "Scope",
+      "value": "{scope}"
+    },
+    {
+      "type": "show_message",
+      "level": "info",
+      "title": "Install Complete",
+      "message": "Installed to {install_dir} ({scope} scope)."
+    }
+  ]
+}

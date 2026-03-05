@@ -1,0 +1,7 @@
+TIPS Demo License
+=================
+
+This is a placeholder license for the TIPS example installer.
+
+By clicking "I Agree", you acknowledge this is sample installer content
+used for testing and demonstration purposes.
