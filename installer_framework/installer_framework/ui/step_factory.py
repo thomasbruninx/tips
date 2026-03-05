@@ -1,4 +1,4 @@
-"""Factory mapping step.type to concrete Kivy widget."""
+"""Factory mapping step.type to concrete Qt widget."""
 
 from __future__ import annotations
 

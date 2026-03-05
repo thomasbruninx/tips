@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 
-from kivy.uix.label import Label
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QLabel
 
 from installer_framework.ui.step_base import StepWidget
 from installer_framework.ui.widgets.classic import ClassicGroupBox
@@ -14,17 +15,17 @@ class FinishStep(StepWidget):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         group = ClassicGroupBox(theme=self.theme, title="Setup Complete")
-        self.summary = Label(text="", color=self.theme.text_primary, halign="left", valign="top")
-        self.summary.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        if self.theme.font_name:
-            self.summary.font_name = self.theme.font_name
-        group.content.add_widget(self.summary)
-        self.add_widget(group)
+        self.summary = QLabel("")
+        self.summary.setWordWrap(True)
+        self.summary.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self.summary.setStyleSheet(f"color: {self.theme.text_primary};")
+        group.content_layout.addWidget(self.summary)
+        self.main_layout.addWidget(group)
 
     def on_show(self) -> None:
         result = self.ctx.state.result_summary
         if not result:
-            self.summary.text = "Installation has not run yet."
+            self.summary.setText("Installation has not run yet.")
             return
 
         success = result.get("success", False)
@@ -39,4 +40,4 @@ class FinishStep(StepWidget):
             "features": result.get("features"),
             "error": result.get("error"),
         }
-        self.summary.text = f"{header}\n\n{json.dumps(details, indent=2)}\n\nClick Finish to close Setup."
+        self.summary.setText(f"{header}\n\n{json.dumps(details, indent=2)}\n\nClick Finish to close Setup.")

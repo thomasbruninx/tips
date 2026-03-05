@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from kivy.app import App
-from kivy.metrics import dp
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.widget import Widget
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
 from installer_framework.app.paths import default_install_dir
 from installer_framework.config.conditions import evaluate_condition
@@ -27,15 +24,15 @@ from installer_framework.ui.widgets.dialogs import show_confirm_dialog, show_mes
 from installer_framework.util.privileges import relaunch_as_admin_windows, relaunch_with_sudo_unix
 
 
-class Wizard(BoxLayout):
-    """Top-level wizard layout with classic branding, content, and navigation."""
+class Wizard(QMainWindow):
+    """Top-level wizard window with classic branding, content, and navigation."""
 
     def __init__(self, config: InstallerConfig, ctx: InstallerContext, **kwargs) -> None:
-        super().__init__(orientation="vertical", spacing=0, padding=0, **kwargs)
+        super().__init__(**kwargs)
         self.config = config
         self.ctx = ctx
         self.theme: UITheme = get_active_theme() or UITheme(config=config.theme, source_root=config.source_root)
-        self.step_cache: dict[str, Widget] = {}
+        self.step_cache: dict[str, QWidget] = {}
         self.visible_steps: list[StepConfig] = []
         self.current_index = 0
 
@@ -45,16 +42,12 @@ class Wizard(BoxLayout):
 
     def _build_shell(self) -> None:
         metrics = self.theme.config.metrics
-        pad = dp(metrics.padding)
 
-        self.root_panel = ClassicPanel(
-            theme=self.theme,
-            orientation="horizontal",
-            fill_color=self.theme.window_bg,
-            border=True,
-            spacing=0,
-            padding=0,
-        )
+        central = QWidget()
+        self.setCentralWidget(central)
+        root = QHBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
         sidebar_source = self.theme.sidebar_image
         sidebar_path = str(sidebar_source) if sidebar_source else None
@@ -63,62 +56,68 @@ class Wizard(BoxLayout):
             title=self.config.branding.product_name,
             subtitle=f"Version {self.config.branding.version}\n{self.config.branding.publisher}",
             image_path=sidebar_path,
-            size_hint_x=None,
-            width=dp(metrics.sidebar_width),
         )
-        self.root_panel.add_widget(self.sidebar)
+        self.sidebar.setFixedWidth(metrics.sidebar_width)
 
-        self.main_column = BoxLayout(orientation="vertical", spacing=0)
+        self.main_column = QWidget()
+        main_layout = QVBoxLayout(self.main_column)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        header_image = self.theme.header_image
-        self.header_host = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(82))
-        self.header = ClassicHeader(
-            theme=self.theme,
-            title=self.config.branding.product_name,
-            description=f"Version {self.config.branding.version} | {self.config.branding.publisher}",
-            image_path=str(header_image) if header_image else None,
+        self.header_host = QWidget()
+        self.header_layout = QVBoxLayout(self.header_host)
+        self.header_layout.setContentsMargins(0, 0, 0, 0)
+        self.header_layout.setSpacing(0)
+        self.header_host.setFixedHeight(82)
+
+        self.content_panel = ClassicPanel(theme=self.theme)
+        self.content_panel.setStyleSheet(
+            f"QFrame {{ background-color: {self.theme.content_bg}; border: 1px solid {self.theme.border_dark}; }}"
         )
-        self.header_host.add_widget(self.header)
-        self.main_column.add_widget(self.header_host)
+        content_layout = QVBoxLayout(self.content_panel)
+        content_layout.setContentsMargins(metrics.padding, metrics.padding, metrics.padding, metrics.padding)
+        content_layout.setSpacing(8)
+        self.content = QWidget()
+        self.content_layout = QVBoxLayout(self.content)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(0)
+        content_layout.addWidget(self.content)
 
-        self.content_panel = ClassicPanel(
-            theme=self.theme,
-            orientation="vertical",
-            fill_color=self.theme.content_bg,
-            border=True,
-            padding=(pad, pad),
-            spacing=dp(8),
-        )
-        self.content = BoxLayout(orientation="vertical")
-        self.content_panel.add_widget(self.content)
-        self.main_column.add_widget(self.content_panel)
+        self.nav_widget = QWidget()
+        nav_layout = QHBoxLayout(self.nav_widget)
+        nav_layout.setContentsMargins(10, 8, 10, 8)
+        nav_layout.setSpacing(6)
 
-        self.main_column.add_widget(ClassicSeparator(theme=self.theme))
-        self._build_nav()
+        self.back_btn = ClassicButton(theme=self.theme, text="< Back")
+        self.next_btn = ClassicButton(theme=self.theme, text="Next >", default_action=True)
+        self.install_btn = ClassicButton(theme=self.theme, text="Install", default_action=True)
+        self.cancel_btn = ClassicButton(theme=self.theme, text="Cancel")
 
-        self.root_panel.add_widget(self.main_column)
-        self.add_widget(self.root_panel)
+        btn_width = 95
+        for btn in (self.back_btn, self.next_btn, self.install_btn, self.cancel_btn):
+            btn.setFixedWidth(btn_width)
+            btn.setFixedHeight(metrics.button_height)
 
-    def _build_nav(self) -> None:
-        h = dp(self.theme.config.metrics.button_height + 14)
-        nav = BoxLayout(orientation="horizontal", size_hint_y=None, height=h, spacing=dp(6), padding=(dp(10), dp(8)))
-        nav.add_widget(Widget())
+        self.back_btn.clicked.connect(self.go_back)
+        self.next_btn.clicked.connect(self.go_next)
+        self.install_btn.clicked.connect(self.begin_install)
+        self.cancel_btn.clicked.connect(lambda: self.cancel_install("Cancelled by user"))
 
-        self.back_btn = ClassicButton(theme=self.theme, text="< Back", size_hint_x=None, width=dp(95), size_hint_y=None, height=dp(self.theme.config.metrics.button_height))
-        self.next_btn = ClassicButton(theme=self.theme, text="Next >", default_action=True, size_hint_x=None, width=dp(95), size_hint_y=None, height=dp(self.theme.config.metrics.button_height))
-        self.install_btn = ClassicButton(theme=self.theme, text="Install", default_action=True, size_hint_x=None, width=dp(95), size_hint_y=None, height=dp(self.theme.config.metrics.button_height))
-        self.cancel_btn = ClassicButton(theme=self.theme, text="Cancel", size_hint_x=None, width=dp(95), size_hint_y=None, height=dp(self.theme.config.metrics.button_height))
+        nav_layout.addStretch(1)
+        nav_layout.addWidget(self.back_btn)
+        nav_layout.addWidget(self.next_btn)
+        nav_layout.addWidget(self.install_btn)
+        nav_layout.addWidget(self.cancel_btn)
 
-        self.back_btn.bind(on_release=lambda *_: self.go_back())
-        self.next_btn.bind(on_release=lambda *_: self.go_next())
-        self.install_btn.bind(on_release=lambda *_: self.begin_install())
-        self.cancel_btn.bind(on_release=lambda *_: self.cancel_install("Cancelled by user"))
+        main_layout.addWidget(self.header_host)
+        main_layout.addWidget(self.content_panel, 1)
+        main_layout.addWidget(ClassicSeparator(theme=self.theme))
+        main_layout.addWidget(self.nav_widget)
 
-        nav.add_widget(self.back_btn)
-        nav.add_widget(self.next_btn)
-        nav.add_widget(self.install_btn)
-        nav.add_widget(self.cancel_btn)
-        self.main_column.add_widget(nav)
+        root.addWidget(self.sidebar)
+        root.addWidget(self.main_column, 1)
+
+        self.setStyleSheet(f"QMainWindow {{ background-color: {self.theme.window_bg}; }}")
 
     def refresh_visible_steps(self) -> None:
         visible: list[StepConfig] = []
@@ -135,53 +134,62 @@ class Wizard(BoxLayout):
             self.step_cache[step_cfg.id] = StepFactory.create(step_cfg, self.ctx, self)
         return self.step_cache[step_cfg.id], step_cfg
 
+    def _clear_layout(self, layout: QVBoxLayout) -> None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+
+    def _set_header(self, step_cfg: StepConfig) -> None:
+        self._clear_layout(self.header_layout)
+        header_image = self.theme.header_image
+        header = ClassicHeader(
+            theme=self.theme,
+            title=step_cfg.title,
+            description=step_cfg.description or f"Setup for {self.config.branding.product_name}",
+            image_path=str(header_image) if header_image else None,
+        )
+        self.header_layout.addWidget(header)
+
     def show_step(self, index: int) -> None:
         self.refresh_visible_steps()
         if not self.visible_steps:
             raise RuntimeError("No visible wizard steps")
 
         self.current_index = max(0, min(index, len(self.visible_steps) - 1))
-        self.content.clear_widgets()
+        self._clear_layout(self.content_layout)
 
         step_widget, step_cfg = self._current_step()
         step_widget.apply_state()
         step_widget.on_show()
-        self.content.add_widget(step_widget)
+        self.content_layout.addWidget(step_widget)
 
-        header_image = self.theme.header_image
-        self.header = ClassicHeader(
-            theme=self.theme,
-            title=step_cfg.title,
-            description=step_cfg.description or f"Setup for {self.config.branding.product_name}",
-            image_path=str(header_image) if header_image else None,
-        )
-        self.header_host.clear_widgets()
-        self.header_host.add_widget(self.header)
-
+        self._set_header(step_cfg)
         self._update_nav(step_cfg)
 
     def _set_visible(self, widget, visible: bool) -> None:
-        widget.disabled = not visible
-        widget.opacity = 1 if visible else 0
+        widget.setVisible(visible)
+        widget.setEnabled(visible)
 
     def _update_nav(self, step_cfg: StepConfig) -> None:
-        self.back_btn.disabled = self.current_index == 0 or step_cfg.type == "install"
+        self.back_btn.setDisabled(self.current_index == 0 or step_cfg.type == "install")
         is_ready = step_cfg.type == "ready"
         is_install = step_cfg.type == "install"
         is_finish = step_cfg.type == "finish"
 
-        self.install_btn.text = "Install"
+        self.install_btn.setText("Install")
         self._set_visible(self.install_btn, is_ready)
 
-        self.next_btn.text = "Finish" if is_finish else "Next >"
-        self.next_btn.disabled = is_install or is_ready
+        self.next_btn.setText("Finish" if is_finish else "Next >")
+        self.next_btn.setDisabled(is_install or is_ready)
         self._set_visible(self.next_btn, not is_ready)
 
         if is_finish:
-            self.next_btn.disabled = False
+            self.next_btn.setDisabled(False)
         if is_install:
-            self.next_btn.disabled = True
-            self.back_btn.disabled = True
+            self.next_btn.setDisabled(True)
+            self.back_btn.setDisabled(True)
 
     def _commit_step(self) -> bool:
         step_widget, step_cfg = self._current_step()
@@ -191,7 +199,9 @@ class Wizard(BoxLayout):
             return False
 
         data = step_widget.get_data()
-        self.ctx.state.answers.update({k: v for k, v in data.items() if k not in {"selected_features", "install_scope", "install_dir"}})
+        self.ctx.state.answers.update(
+            {k: v for k, v in data.items() if k not in {"selected_features", "install_scope", "install_dir"}}
+        )
         if "selected_features" in data:
             self.ctx.state.selected_features = list(data["selected_features"])
         if "install_scope" in data:
@@ -221,7 +231,8 @@ class Wizard(BoxLayout):
     def go_next(self) -> None:
         _, step_cfg = self._current_step()
         if step_cfg.type == "finish":
-            App.get_running_app().stop()
+            self.close()
+            QApplication.instance().quit()
             return
 
         if not self._commit_step():
@@ -269,7 +280,8 @@ class Wizard(BoxLayout):
                 return
             self.ctx.cancel()
             show_message_dialog("warn", "Installer closed", reason)
-            App.get_running_app().stop()
+            self.close()
+            QApplication.instance().quit()
 
         show_confirm_dialog("Cancel installation", "Are you sure you want to cancel setup?", _close)
 
@@ -281,7 +293,8 @@ class Wizard(BoxLayout):
             if self.config.windows.get("allow_uac_elevation", False):
                 relaunched = relaunch_as_admin_windows(sys.argv[1:])
                 if relaunched:
-                    App.get_running_app().stop()
+                    self.close()
+                    QApplication.instance().quit()
                     return False
             show_message_dialog(
                 "error",
@@ -293,7 +306,8 @@ class Wizard(BoxLayout):
         if self.config.unix.get("allow_sudo_relaunch", False):
             relaunched = relaunch_with_sudo_unix(sys.argv[1:])
             if relaunched:
-                App.get_running_app().stop()
+                self.close()
+                QApplication.instance().quit()
                 return False
 
         show_message_dialog(

@@ -4,56 +4,53 @@ from __future__ import annotations
 
 from typing import Any
 
-from kivy.metrics import dp
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from installer_framework.config.models import StepConfig
 from installer_framework.engine.context import InstallerContext
 from installer_framework.ui.theme import UITheme, get_active_theme
 
 
-class StepWidget(BoxLayout):
+class StepWidget(QWidget):
     """Common behavior for step views."""
 
     def __init__(self, step_config: StepConfig, ctx: InstallerContext, wizard, **kwargs) -> None:
+        super().__init__(**kwargs)
         theme = getattr(wizard, "theme", None) or get_active_theme()
-        spacing = dp(8)
-        padding = dp(8)
-        super().__init__(orientation="vertical", spacing=spacing, padding=padding, **kwargs)
         self.step_config = step_config
         self.ctx = ctx
         self.wizard = wizard
         self.theme: UITheme | None = theme
 
-    def title_label(self, text: str | None = None) -> Label:
-        label = Label(
-            text=text or self.step_config.title,
-            size_hint_y=None,
-            height=dp(30),
-            halign="left",
-            valign="middle",
-            color=self.theme.text_primary if self.theme else (1, 1, 1, 1),
-            font_size=f"{self.theme.base_size}sp" if self.theme else "14sp",
-        )
-        label.bind(size=lambda instance, value: setattr(instance, "text_size", value))
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(8, 8, 8, 8)
+        self.main_layout.setSpacing(8)
+
+    def _font(self, size: int, bold: bool = False) -> QFont:
+        font = QFont()
         if self.theme and self.theme.font_name:
-            label.font_name = self.theme.font_name
+            font.setFamily(self.theme.font_name)
+        font.setPointSize(size)
+        font.setBold(bold)
+        return font
+
+    def title_label(self, text: str | None = None) -> QLabel:
+        label = QLabel(text or self.step_config.title)
+        label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        label.setFont(self._font(self.theme.title_size if self.theme else 14, bold=True))
+        label.setStyleSheet(f"color: {self.theme.text_primary if self.theme else '#000'};")
+        label.setFixedHeight(30)
         return label
 
-    def description_label(self, text: str | None = None, height: int = 30) -> Label:
-        label = Label(
-            text=text or self.step_config.description,
-            size_hint_y=None,
-            height=dp(height),
-            halign="left",
-            valign="top",
-            color=self.theme.text_primary if self.theme else (1, 1, 1, 1),
-            font_size=f"{self.theme.base_size}sp" if self.theme else "14sp",
-        )
-        label.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        if self.theme and self.theme.font_name:
-            label.font_name = self.theme.font_name
+    def description_label(self, text: str | None = None, height: int = 30) -> QLabel:
+        label = QLabel(text or self.step_config.description)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        label.setFont(self._font(self.theme.base_size if self.theme else 12))
+        label.setStyleSheet(f"color: {self.theme.text_primary if self.theme else '#000'};")
+        label.setFixedHeight(height)
         return label
 
     def on_show(self) -> None:

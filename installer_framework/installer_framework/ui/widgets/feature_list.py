@@ -4,84 +4,78 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from kivy.metrics import dp
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.checkbox import CheckBox
-from kivy.uix.label import Label
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.textinput import TextInput
+from PyQt6.QtWidgets import QCheckBox, QLineEdit, QScrollArea, QVBoxLayout, QWidget
 
 from installer_framework.config.models import FeatureConfig
 from installer_framework.config.models import ThemeConfig
 from installer_framework.ui.theme import UITheme, get_active_theme
-from installer_framework.ui.widgets.classic import ClassicPanel
-
 
 _DEFAULT_THEME = UITheme(config=ThemeConfig(), source_root=Path.cwd())
 
 
-class FeatureListWidget(ClassicPanel):
+class FeatureListWidget(QWidget):
     def __init__(self, features: list[FeatureConfig], selected: list[str] | None = None, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.theme: UITheme = get_active_theme() or _DEFAULT_THEME
-        super().__init__(
-            theme=self.theme,
-            orientation="vertical",
-            spacing=dp(6),
-            padding=(dp(6), dp(6)),
-            fill_color=self.theme.panel_bg,
-            border=True,
-            **kwargs,
-        )
         self.features = features
         self.selected = set(selected or [])
-        self.rows: list[tuple[FeatureConfig, BoxLayout, CheckBox]] = []
+        self.rows: list[tuple[FeatureConfig, QWidget, QCheckBox]] = []
 
-        self.search = TextInput(hint_text="Search features...", multiline=False, size_hint_y=None, height=dp(30))
-        self.search.background_normal = ""
-        self.search.background_active = ""
-        self.search.background_color = self.theme.panel_bg
-        self.search.foreground_color = self.theme.text_primary
-        self.search.bind(text=lambda *_: self._apply_filter())
+        root = QVBoxLayout(self)
+        root.setContentsMargins(6, 6, 6, 6)
+        root.setSpacing(6)
 
-        self.scroll = ScrollView()
-        self.container = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None)
-        self.container.bind(minimum_height=lambda instance, value: setattr(instance, "height", value))
-        self.scroll.add_widget(self.container)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Search features...")
+        self.search.textChanged.connect(self._apply_filter)
+        self.search.setStyleSheet(
+            f"QLineEdit {{ background-color: {self.theme.panel_bg}; color: {self.theme.text_primary}; border: 1px solid {self.theme.border_dark}; padding: 2px 4px; }}"
+        )
 
-        if self.theme.font_name:
-            self.search.font_name = self.theme.font_name
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll_container = QWidget()
+        self.container_layout = QVBoxLayout(self.scroll_container)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
+        self.container_layout.setSpacing(4)
+        self.scroll.setWidget(self.scroll_container)
+        self.scroll.setStyleSheet(f"QScrollArea {{ border: 1px solid {self.theme.border_dark}; background-color: {self.theme.panel_bg}; }}")
 
-        self.add_widget(self.search)
-        self.add_widget(self.scroll)
+        root.addWidget(self.search)
+        root.addWidget(self.scroll, 1)
 
         self._build_rows()
 
     def _build_rows(self) -> None:
-        self.container.clear_widgets()
+        while self.container_layout.count():
+            item = self.container_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
         self.rows.clear()
         for feature in self.features:
-            row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(30), spacing=dp(6))
-            checkbox = CheckBox(active=feature.id in self.selected or feature.default, size_hint_x=None, width=dp(34))
-            label = Label(text=feature.label, color=self.theme.text_primary, halign="left", valign="middle")
-            label.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-            if self.theme.font_name:
-                label.font_name = self.theme.font_name
-            row.add_widget(checkbox)
-            row.add_widget(label)
-            self.container.add_widget(row)
+            row = QWidget()
+            layout = QVBoxLayout(row)
+            layout.setContentsMargins(0, 0, 0, 0)
+            checkbox = QCheckBox(feature.label)
+            checkbox.setChecked(feature.id in self.selected or feature.default)
+            checkbox.setStyleSheet(f"QCheckBox {{ color: {self.theme.text_primary}; }}")
+            layout.addWidget(checkbox)
+            self.container_layout.addWidget(row)
             self.rows.append((feature, row, checkbox))
 
-    def _apply_filter(self) -> None:
-        needle = self.search.text.strip().lower()
-        for feature, row, _ in self.rows:
+        self.container_layout.addStretch(1)
+
+    def _apply_filter(self, text: str) -> None:
+        needle = text.strip().lower()
+        for feature, row, _checkbox in self.rows:
             visible = not needle or needle in feature.label.lower() or needle in feature.description.lower()
-            row.height = dp(30) if visible else 0
-            row.opacity = 1 if visible else 0
-            row.disabled = not visible
+            row.setVisible(visible)
 
     def get_selected(self) -> list[str]:
         result: list[str] = []
-        for feature, _, checkbox in self.rows:
-            if checkbox.active:
+        for feature, _row, checkbox in self.rows:
+            if checkbox.isChecked():
                 result.append(feature.id)
         return result

@@ -1,294 +1,247 @@
-"""Classic InstallShield-like reusable UI widgets."""
+"""Classic InstallShield-like reusable Qt widgets."""
 
 from __future__ import annotations
 
-from typing import Callable
-
-from kivy.graphics import Color, Line, Rectangle
-from kivy.metrics import dp
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.checkbox import CheckBox
-from kivy.uix.image import Image
-from kivy.uix.label import Label
-from kivy.uix.widget import Widget
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPixmap
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from installer_framework.ui.theme import UITheme
 
 
-class ClassicPanel(BoxLayout):
-    """Panel with 3D bevel border and configurable fill color."""
 
-    def __init__(self, theme: UITheme, fill_color=None, border: bool = True, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.theme = theme
-        self.fill_color = fill_color or theme.panel_bg
-        self.border = border
-
-        with self.canvas.before:
-            self._bg_color = Color(*self.fill_color)
-            self._bg_rect = Rectangle(pos=self.pos, size=self.size)
-
-        with self.canvas.after:
-            self._border_light_color = Color(*self.theme.border_light)
-            self._border_light_top = Line(points=[], width=1)
-            self._border_light_left = Line(points=[], width=1)
-            self._border_dark_color = Color(*self.theme.border_dark)
-            self._border_dark_bottom = Line(points=[], width=1)
-            self._border_dark_right = Line(points=[], width=1)
-
-        self.bind(pos=self._redraw, size=self._redraw)
-        self._redraw()
-
-    def _redraw(self, *_args) -> None:
-        x, y = self.pos
-        w, h = self.size
-        self._bg_rect.pos = self.pos
-        self._bg_rect.size = self.size
-        self._bg_color.rgba = self.fill_color
-
-        if not self.border:
-            self._border_light_top.points = []
-            self._border_light_left.points = []
-            self._border_dark_bottom.points = []
-            self._border_dark_right.points = []
-            return
-
-        self._border_light_top.points = [x, y + h - 1, x + w, y + h - 1]
-        self._border_light_left.points = [x, y, x, y + h]
-        self._border_dark_bottom.points = [x, y, x + w, y]
-        self._border_dark_right.points = [x + w - 1, y, x + w - 1, y + h]
+def _set_font(widget, theme: UITheme, size: int, bold: bool = False) -> None:
+    font = QFont(theme.font_name or "")
+    if theme.font_name:
+        font.setFamily(theme.font_name)
+    font.setPointSize(size)
+    font.setBold(bold)
+    widget.setFont(font)
 
 
-class ClassicSeparator(Widget):
-    """Horizontal separator with light and dark edge."""
+class ClassicPanel(QFrame):
+    """Panel with classic recessed border."""
 
     def __init__(self, theme: UITheme, **kwargs) -> None:
-        super().__init__(size_hint_y=None, height=dp(2), **kwargs)
-        self.theme = theme
-        with self.canvas:
-            self._dark = Color(*self.theme.border_dark)
-            self._line_dark = Line(points=[], width=1)
-            self._light = Color(*self.theme.border_light)
-            self._line_light = Line(points=[], width=1)
-        self.bind(pos=self._redraw, size=self._redraw)
-        self._redraw()
-
-    def _redraw(self, *_args) -> None:
-        x, y = self.pos
-        w, _ = self.size
-        self._line_dark.points = [x, y + 1, x + w, y + 1]
-        self._line_light.points = [x, y, x + w, y]
-
-
-class ClassicButton(Button):
-    """Beveled button with classic visual states."""
-
-    def __init__(self, theme: UITheme, default_action: bool = False, **kwargs) -> None:
         super().__init__(**kwargs)
         self.theme = theme
-        self.default_action = default_action
-        self.background_normal = ""
-        self.background_down = ""
-        self.background_color = (0, 0, 0, 0)
-        self.color = self.theme.text_primary
+        self.setFrameShape(QFrame.Shape.Panel)
+        self.setFrameShadow(QFrame.Shadow.Raised)
+        self.setLineWidth(1)
+        self.setMidLineWidth(1)
+        self.setStyleSheet(
+            f"QFrame {{ background-color: {theme.panel_bg}; border: 1px solid {theme.border_dark}; }}"
+        )
 
-        with self.canvas.before:
-            self._bg_color = Color(*self.theme.button_face)
-            self._bg_rect = Rectangle(pos=self.pos, size=self.size)
 
-        with self.canvas.after:
-            self._line_color_top = Color(*self.theme.border_light)
-            self._line_top = Line(points=[], width=1)
-            self._line_left = Line(points=[], width=1)
-            self._line_color_bottom = Color(*self.theme.border_dark)
-            self._line_bottom = Line(points=[], width=1)
-            self._line_right = Line(points=[], width=1)
-            self._default_outline_color = Color(*self.theme.accent)
-            self._default_outline = Line(points=[], width=1)
+class ClassicSeparator(QFrame):
+    """Horizontal separator line."""
 
-        self.bind(pos=self._redraw, size=self._redraw, state=self._redraw, disabled=self._redraw)
-        self._redraw()
+    def __init__(self, theme: UITheme, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.setFrameShape(QFrame.Shape.HLine)
+        self.setFrameShadow(QFrame.Shadow.Sunken)
+        self.setStyleSheet(f"QFrame {{ color: {theme.border_dark}; background-color: {theme.border_dark}; }}")
 
-    def _redraw(self, *_args) -> None:
-        x, y = self.pos
-        w, h = self.size
 
-        if self.disabled:
-            face = self.theme.button_face
-        elif self.state == "down":
-            face = self.theme.button_pressed
-        else:
-            face = self.theme.button_face
+class ClassicButton(QPushButton):
+    """Beveled classic button."""
 
-        self._bg_color.rgba = face
-        self._bg_rect.pos = self.pos
-        self._bg_rect.size = self.size
-
-        top_color = self.theme.border_dark if self.state == "down" else self.theme.border_light
-        bottom_color = self.theme.border_light if self.state == "down" else self.theme.border_dark
-
-        self._line_color_top.rgba = top_color
-        self._line_color_bottom.rgba = bottom_color
-
-        self._line_top.points = [x, y + h - 1, x + w, y + h - 1]
-        self._line_left.points = [x, y, x, y + h]
-        self._line_bottom.points = [x, y, x + w, y]
-        self._line_right.points = [x + w - 1, y, x + w - 1, y + h]
-
-        if self.default_action and not self.disabled:
-            self._default_outline.points = [
-                x + 2,
-                y + 2,
-                x + w - 2,
-                y + 2,
-                x + w - 2,
-                y + h - 2,
-                x + 2,
-                y + h - 2,
-                x + 2,
-                y + 2,
-            ]
-        else:
-            self._default_outline.points = []
+    def __init__(self, theme: UITheme, text: str, default_action: bool = False, **kwargs) -> None:
+        super().__init__(text, **kwargs)
+        self.theme = theme
+        border = theme.accent if default_action else theme.border_dark
+        self.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {theme.button_face};
+                color: {theme.text_primary};
+                border: 1px solid {border};
+                padding: 3px 10px;
+            }}
+            QPushButton:pressed {{
+                background-color: {theme.button_pressed};
+                border-style: inset;
+            }}
+            QPushButton:disabled {{
+                color: #7A7A7A;
+                background-color: #E6E6E6;
+                border: 1px solid #B0B0B0;
+            }}
+            """
+        )
+        _set_font(self, theme, theme.base_size)
 
 
 class ClassicHeader(ClassicPanel):
-    """Wizard step header strip."""
+    """Header strip with title/description and optional image."""
 
     def __init__(self, theme: UITheme, title: str, description: str, image_path: str | None = None, **kwargs) -> None:
-        super().__init__(
-            theme=theme,
-            orientation="horizontal",
-            fill_color=theme.panel_bg,
-            size_hint_y=None,
-            height=dp(82),
-            padding=(dp(10), dp(8)),
-            spacing=dp(8),
-            **kwargs,
+        super().__init__(theme=theme, **kwargs)
+        self.setStyleSheet(
+            f"QFrame {{ background-color: {theme.panel_bg}; border: 1px solid {theme.border_dark}; }}"
         )
-        text_block = BoxLayout(orientation="vertical", spacing=dp(2))
-        title_lbl = Label(text=f"[b]{title}[/b]", markup=True, color=theme.text_primary, font_size=f"{theme.title_size}sp", halign="left")
-        title_lbl.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        desc_lbl = Label(text=description, color=theme.text_primary, font_size=f"{theme.base_size}sp", halign="left", valign="top")
-        desc_lbl.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        text_block.add_widget(title_lbl)
-        text_block.add_widget(desc_lbl)
-        self.add_widget(text_block)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(8)
+
+        text_wrap = QWidget()
+        text_layout = QVBoxLayout(text_wrap)
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(2)
+
+        title_lbl = QLabel(title)
+        title_lbl.setStyleSheet(f"color: {theme.text_primary};")
+        _set_font(title_lbl, theme, theme.title_size, bold=True)
+
+        desc_lbl = QLabel(description)
+        desc_lbl.setWordWrap(True)
+        desc_lbl.setStyleSheet(f"color: {theme.text_primary};")
+        _set_font(desc_lbl, theme, theme.base_size)
+
+        text_layout.addWidget(title_lbl)
+        text_layout.addWidget(desc_lbl)
+        layout.addWidget(text_wrap, 1)
 
         if image_path:
-            self.add_widget(Image(source=image_path, size_hint_x=None, width=dp(120)))
+            pixmap = QPixmap(image_path)
+            if not pixmap.isNull():
+                img = QLabel()
+                img.setPixmap(pixmap.scaledToHeight(56, Qt.TransformationMode.SmoothTransformation))
+                layout.addWidget(img, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
 
-class ClassicCheckboxRow(BoxLayout):
-    """Checkbox row with click target label/button."""
-
-    def __init__(self, theme: UITheme, text: str, active: bool = False, on_toggle: Callable[[bool], None] | None = None, **kwargs) -> None:
-        super().__init__(orientation="horizontal", size_hint_y=None, height=dp(30), spacing=dp(6), **kwargs)
-        self.theme = theme
-        self.checkbox = CheckBox(active=active, size_hint_x=None, width=dp(32))
-        self.btn = Button(text=text)
-        self.btn.background_normal = ""
-        self.btn.background_down = ""
-        self.btn.background_color = (0, 0, 0, 0)
-        self.btn.color = theme.text_primary
-        self.btn.halign = "left"
-        self.btn.valign = "middle"
-        self.btn.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        self.btn.bind(on_release=lambda *_: self._toggle())
-
-        if on_toggle:
-            self.checkbox.bind(active=lambda _i, value: on_toggle(value))
-
-        self.add_widget(self.checkbox)
-        self.add_widget(self.btn)
-
-    def _toggle(self) -> None:
-        self.checkbox.active = not self.checkbox.active
-
-
-class ClassicGroupBox(ClassicPanel):
-    """Classic group box frame with title label."""
-
-    def __init__(self, theme: UITheme, title: str, **kwargs) -> None:
-        super().__init__(
-            theme=theme,
-            orientation="vertical",
-            fill_color=theme.panel_bg,
-            padding=(dp(8), dp(8)),
-            spacing=dp(6),
-            **kwargs,
-        )
-        self.title_label = Label(text=f"[b]{title}[/b]", markup=True, color=theme.text_primary, size_hint_y=None, height=dp(22), halign="left")
-        self.title_label.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        self.content = BoxLayout(orientation="vertical", spacing=dp(6))
-        self.add_widget(self.title_label)
-        self.add_widget(self.content)
-
-
-class ClassicDialogFrame(ClassicPanel):
-    """Dialog shell with title/body/button rows."""
-
-    def __init__(self, theme: UITheme, title: str, message: str, **kwargs) -> None:
-        super().__init__(
-            theme=theme,
-            orientation="vertical",
-            fill_color=theme.window_bg,
-            padding=(dp(12), dp(12)),
-            spacing=dp(10),
-            **kwargs,
-        )
-        self.title_label = Label(text=f"[b]{title}[/b]", markup=True, color=theme.text_primary, size_hint_y=None, height=dp(24), halign="left")
-        self.title_label.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        self.message_label = Label(text=message, color=theme.text_primary, halign="left", valign="top")
-        self.message_label.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        self.buttons = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(32), spacing=dp(8))
-
-        self.add_widget(self.title_label)
-        self.add_widget(self.message_label)
-        self.add_widget(self.buttons)
-
-
-class ClassicSidebar(ClassicPanel):
-    """Wizard sidebar with image or classic blue gradient fallback."""
+class ClassicSidebar(QWidget):
+    """Sidebar with image or gradient fallback."""
 
     def __init__(self, theme: UITheme, title: str, subtitle: str = "", image_path: str | None = None, **kwargs) -> None:
-        self._top_rect = None
-        self._bottom_rect = None
-        super().__init__(theme=theme, orientation="vertical", fill_color=theme.sidebar_top, border=True, **kwargs)
+        super().__init__(**kwargs)
         self.theme = theme
-        self._image_path = image_path
+        self.title = title
+        self.subtitle = subtitle
+        self.pixmap = QPixmap(image_path) if image_path else QPixmap()
 
-        with self.canvas.before:
-            self._gradient_color_top = Color(*theme.sidebar_top)
-            self._top_rect = Rectangle(pos=self.pos, size=self.size)
-            self._gradient_color_bottom = Color(*theme.sidebar_bottom)
-            self._bottom_rect = Rectangle(pos=self.pos, size=self.size)
+    def paintEvent(self, _event) -> None:
+        painter = QPainter(self)
+        rect = self.rect()
 
-        self.bind(pos=self._redraw, size=self._redraw)
+        grad = QLinearGradient(float(rect.left()), float(rect.top()), float(rect.left()), float(rect.bottom()))
+        grad.setColorAt(0.0, QColor(self.theme.sidebar_top))
+        grad.setColorAt(1.0, QColor(self.theme.sidebar_bottom))
+        painter.fillRect(rect, grad)
 
-        if image_path:
-            self.add_widget(Image(source=image_path))
-        else:
-            self.padding = (dp(10), dp(10))
-            self.spacing = dp(8)
-            self.add_widget(Widget())
-            title_lbl = Label(text=f"[b]{title}[/b]", markup=True, color=(1, 1, 1, 1), halign="left", valign="bottom", size_hint_y=None, height=dp(40))
-            title_lbl.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-            subtitle_lbl = Label(text=subtitle, color=(1, 1, 1, 1), halign="left", valign="top", size_hint_y=None, height=dp(46))
-            subtitle_lbl.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-            self.add_widget(title_lbl)
-            self.add_widget(subtitle_lbl)
-        self._redraw()
+        painter.setPen(QColor(self.theme.border_dark))
+        painter.drawRect(rect.adjusted(0, 0, -1, -1))
 
-    def _redraw(self, *_args) -> None:
-        super()._redraw()
-        if self._top_rect is None or self._bottom_rect is None:
+        if not self.pixmap.isNull():
+            painter.drawPixmap(rect, self.pixmap)
             return
-        x, y = self.pos
-        w, h = self.size
-        half = h * 0.45
-        self._top_rect.pos = (x, y + h - half)
-        self._top_rect.size = (w, half)
-        self._bottom_rect.pos = (x, y)
-        self._bottom_rect.size = (w, h - half)
+
+        painter.setPen(Qt.GlobalColor.white)
+        title_font = QFont(self.theme.font_name or "", self.theme.title_size)
+        title_font.setBold(True)
+        painter.setFont(title_font)
+        painter.drawText(rect.adjusted(10, rect.height() - 90, -10, -50), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop, self.title)
+
+        sub_font = QFont(self.theme.font_name or "", self.theme.base_size)
+        painter.setFont(sub_font)
+        painter.drawText(rect.adjusted(10, rect.height() - 55, -10, -10), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop, self.subtitle)
+
+
+class ClassicCheckboxRow(QWidget):
+    """Checkbox row with clickable text button."""
+
+    def __init__(self, theme: UITheme, text: str, active: bool = False, **kwargs) -> None:
+        super().__init__(**kwargs)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self.checkbox = QCheckBox()
+        self.checkbox.setChecked(active)
+        self.checkbox.setStyleSheet(f"QCheckBox {{ color: {theme.text_primary}; }}")
+
+        self.button = QPushButton(text)
+        self.button.setFlat(True)
+        self.button.setStyleSheet(
+            f"QPushButton {{ border: none; text-align: left; color: {theme.text_primary}; background: transparent; }}"
+        )
+        _set_font(self.button, theme, theme.base_size)
+        self.button.clicked.connect(lambda: self.checkbox.setChecked(not self.checkbox.isChecked()))
+
+        layout.addWidget(self.checkbox)
+        layout.addWidget(self.button, 1)
+
+
+class ClassicGroupBox(QGroupBox):
+    """Classic framed group box with content layout."""
+
+    def __init__(self, theme: UITheme, title: str, **kwargs) -> None:
+        super().__init__(title, **kwargs)
+        self.theme = theme
+        self.setStyleSheet(
+            f"""
+            QGroupBox {{
+                color: {theme.text_primary};
+                border: 1px solid {theme.border_dark};
+                margin-top: 8px;
+                padding-top: 10px;
+                background-color: {theme.panel_bg};
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 8px;
+                padding: 0 3px;
+            }}
+            """
+        )
+        _set_font(self, theme, theme.base_size, bold=True)
+
+        self.content = QWidget()
+        self.content_layout = QVBoxLayout(self.content)
+        self.content_layout.setContentsMargins(8, 8, 8, 8)
+        self.content_layout.setSpacing(6)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(4, 8, 4, 4)
+        root.addWidget(self.content)
+
+
+class ClassicDialogFrame(QWidget):
+    """Dialog content frame with title/body/button row."""
+
+    def __init__(self, theme: UITheme, title: str, message: str, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.theme = theme
+        self.setStyleSheet(f"background-color: {theme.window_bg};")
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(12, 12, 12, 12)
+        root.setSpacing(10)
+
+        self.title_label = QLabel(title)
+        _set_font(self.title_label, theme, theme.base_size, bold=True)
+        self.title_label.setStyleSheet(f"color: {theme.text_primary};")
+
+        self.message_label = QLabel(message)
+        _set_font(self.message_label, theme, theme.base_size)
+        self.message_label.setStyleSheet(f"color: {theme.text_primary};")
+        self.message_label.setWordWrap(True)
+
+        self.buttons = QWidget()
+        self.buttons_layout = QHBoxLayout(self.buttons)
+        self.buttons_layout.setContentsMargins(0, 0, 0, 0)
+        self.buttons_layout.setSpacing(8)
+
+        root.addWidget(self.title_label)
+        root.addWidget(self.message_label, 1)
+        root.addWidget(self.buttons)

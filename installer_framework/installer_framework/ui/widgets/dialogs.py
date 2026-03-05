@@ -1,18 +1,15 @@
-"""Kivy modal dialogs for messages and confirmations."""
+"""Qt modal dialogs for messages and confirmations."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Callable
 
-from kivy.metrics import dp
-from kivy.uix.modalview import ModalView
-from kivy.uix.widget import Widget
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QWidget
 
 from installer_framework.config.models import ThemeConfig
 from installer_framework.ui.theme import UITheme, get_active_theme
 from installer_framework.ui.widgets.classic import ClassicButton, ClassicDialogFrame
-
 
 _DEFAULT_THEME = UITheme(config=ThemeConfig(), source_root=Path.cwd())
 
@@ -25,41 +22,51 @@ def _theme() -> UITheme:
 
 def show_message_dialog(level: str, title: str, message: str) -> None:
     theme = _theme()
-    modal = ModalView(size_hint=(0.62, 0.34), auto_dismiss=False)
-    frame = ClassicDialogFrame(theme=theme, title=title, message=message)
+    dialog = QDialog()
+    dialog.setWindowTitle(title)
+    dialog.setModal(True)
+    dialog.resize(460, 220)
 
-    frame.buttons.add_widget(Widget())
-    close_btn = ClassicButton(theme=theme, text="OK", default_action=True, size_hint_x=None, width=dp(88), size_hint_y=None, height=dp(theme.config.metrics.button_height))
-    close_btn.bind(on_release=lambda *_: modal.dismiss())
-    frame.buttons.add_widget(close_btn)
+    frame = ClassicDialogFrame(theme=theme, title=title, message=message)
+    frame.buttons_layout.addStretch(1)
+    ok_btn = ClassicButton(theme=theme, text="OK", default_action=True)
+    ok_btn.setFixedWidth(88)
+    ok_btn.clicked.connect(dialog.accept)
+    frame.buttons_layout.addWidget(ok_btn)
 
     if level == "error":
-        frame.title_label.color = (0.6, 0.0, 0.0, 1)
+        frame.title_label.setStyleSheet("color: #8B0000;")
     elif level == "warn":
-        frame.title_label.color = (0.5, 0.35, 0.0, 1)
+        frame.title_label.setStyleSheet("color: #8B5A00;")
 
-    modal.add_widget(frame)
-    modal.open()
+    root = QHBoxLayout(dialog)
+    root.setContentsMargins(0, 0, 0, 0)
+    root.addWidget(frame)
+    dialog.exec()
 
 
 
 def show_confirm_dialog(title: str, message: str, callback: Callable[[bool], None]) -> None:
     theme = _theme()
-    modal = ModalView(size_hint=(0.64, 0.36), auto_dismiss=False)
+    dialog = QDialog()
+    dialog.setWindowTitle(title)
+    dialog.setModal(True)
+    dialog.resize(470, 220)
+
     frame = ClassicDialogFrame(theme=theme, title=title, message=message)
+    frame.buttons_layout.addStretch(1)
+    yes_btn = ClassicButton(theme=theme, text="Yes", default_action=True)
+    yes_btn.setFixedWidth(88)
+    no_btn = ClassicButton(theme=theme, text="No")
+    no_btn.setFixedWidth(88)
 
-    frame.buttons.add_widget(Widget())
-    yes_btn = ClassicButton(theme=theme, text="Yes", default_action=True, size_hint_x=None, width=dp(88), size_hint_y=None, height=dp(theme.config.metrics.button_height))
-    no_btn = ClassicButton(theme=theme, text="No", size_hint_x=None, width=dp(88), size_hint_y=None, height=dp(theme.config.metrics.button_height))
+    yes_btn.clicked.connect(lambda: (callback(True), dialog.accept()))
+    no_btn.clicked.connect(lambda: (callback(False), dialog.reject()))
 
-    def finish(value: bool) -> None:
-        modal.dismiss()
-        callback(value)
+    frame.buttons_layout.addWidget(yes_btn)
+    frame.buttons_layout.addWidget(no_btn)
 
-    yes_btn.bind(on_release=lambda *_: finish(True))
-    no_btn.bind(on_release=lambda *_: finish(False))
-    frame.buttons.add_widget(yes_btn)
-    frame.buttons.add_widget(no_btn)
-
-    modal.add_widget(frame)
-    modal.open()
+    root = QHBoxLayout(dialog)
+    root.setContentsMargins(0, 0, 0, 0)
+    root.addWidget(frame)
+    dialog.exec()

@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from kivy.metrics import dp
-from kivy.uix.checkbox import CheckBox
-from kivy.uix.spinner import Spinner
+from PyQt6.QtWidgets import QCheckBox, QComboBox, QLabel
 
 from installer_framework.config.conditions import evaluate_condition
 from installer_framework.config.validation import validate_field_value
@@ -21,7 +19,7 @@ class FormStep(StepWidget):
         self.controls: dict[str, Any] = {}
 
         group = ClassicGroupBox(theme=self.theme, title=self.step_config.title)
-        group.content.add_widget(self.description_label(height=40))
+        group.content_layout.addWidget(self.description_label(height=40))
 
         for field in self.step_config.fields:
             if not evaluate_condition(field.show_if, self.ctx.state):
@@ -30,29 +28,26 @@ class FormStep(StepWidget):
             if field.type in {"text", "password"}:
                 control = ValidatedTextInput(field=field)
                 self.controls[field.id] = control
-                group.content.add_widget(control)
+                group.content_layout.addWidget(control)
             elif field.type == "checkbox":
                 row = ClassicCheckboxRow(theme=self.theme, text=field.label, active=bool(field.default))
                 self.controls[field.id] = row.checkbox
-                group.content.add_widget(row)
+                group.content_layout.addWidget(row)
             elif field.type == "select":
-                group.content.add_widget(self.description_label(text=field.label, height=22))
-                spinner = Spinner(
-                    text=str(field.default or (field.choices[0] if field.choices else "")),
-                    values=field.choices,
-                    size_hint_y=None,
-                    height=dp(30),
+                label = QLabel(field.label)
+                label.setStyleSheet(f"color: {self.theme.text_primary};")
+                combo = QComboBox()
+                combo.addItems(field.choices)
+                if field.default:
+                    combo.setCurrentText(str(field.default))
+                combo.setStyleSheet(
+                    f"QComboBox {{ background-color: {self.theme.panel_bg}; color: {self.theme.text_primary}; border: 1px solid {self.theme.border_dark}; padding: 2px 4px; }}"
                 )
-                spinner.background_normal = ""
-                spinner.background_down = ""
-                spinner.background_color = self.theme.panel_bg
-                spinner.color = self.theme.text_primary
-                if self.theme.font_name:
-                    spinner.font_name = self.theme.font_name
-                self.controls[field.id] = spinner
-                group.content.add_widget(spinner)
+                self.controls[field.id] = combo
+                group.content_layout.addWidget(label)
+                group.content_layout.addWidget(combo)
 
-        self.add_widget(group)
+        self.main_layout.addWidget(group)
 
     def apply_state(self) -> None:
         for field in self.step_config.fields:
@@ -62,11 +57,11 @@ class FormStep(StepWidget):
             value = self.ctx.state.answers.get(field.id, field.default)
             if isinstance(control, ValidatedTextInput):
                 control.set_value(value)
-            elif isinstance(control, CheckBox):
-                control.active = bool(value)
+            elif isinstance(control, QCheckBox):
+                control.setChecked(bool(value))
             else:
                 if value is not None:
-                    control.text = str(value)
+                    control.setCurrentText(str(value))
 
     def get_data(self) -> dict[str, Any]:
         data: dict[str, Any] = {}
@@ -76,10 +71,10 @@ class FormStep(StepWidget):
                 continue
             if isinstance(control, ValidatedTextInput):
                 data[field.id] = control.value
-            elif isinstance(control, CheckBox):
-                data[field.id] = bool(control.active)
+            elif isinstance(control, QCheckBox):
+                data[field.id] = bool(control.isChecked())
             else:
-                data[field.id] = control.text
+                data[field.id] = control.currentText()
         return data
 
     def validate(self) -> tuple[bool, str | None]:
@@ -92,12 +87,12 @@ class FormStep(StepWidget):
                 ok, message = validate_field_value(field, control.value)
                 if not ok:
                     return False, f"{field.label}: {message}"
-            elif isinstance(control, CheckBox):
-                ok, message = validate_field_value(field, bool(control.active))
+            elif isinstance(control, QCheckBox):
+                ok, message = validate_field_value(field, bool(control.isChecked()))
                 if not ok:
                     return False, f"{field.label}: {message}"
             elif control is not None:
-                ok, message = validate_field_value(field, control.text)
+                ok, message = validate_field_value(field, control.currentText())
                 if not ok:
                     return False, f"{field.label}: {message}"
         return True, None

@@ -13,7 +13,7 @@ authors = [
   { name = "TIPS" }
 ]
 dependencies = [
-  "kivy>=2.3.0",
+  "PyQt6>=6.7.0",
   "jsonschema>=4.0.0",
   "packaging>=24.0",
   "plyer>=2.1.0",

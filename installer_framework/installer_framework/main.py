@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
 from installer_framework.config.loader import load_config
@@ -32,11 +31,9 @@ def main() -> None:
     args = parse_args()
     config_path = Path(args.config).resolve()
     config = load_config(config_path)
-    # Prevent Kivy from consuming installer CLI args like --config.
-    os.environ.setdefault("KIVY_NO_ARGS", "1")
-    from installer_framework.app.kivy_app import InstallerKivyApp
+    from installer_framework.app.qt_app import InstallerQtApp
 
-    app = InstallerKivyApp(config=config, resume=args.resume)
+    app = InstallerQtApp(config=config, resume=args.resume)
     app.run()
 
 

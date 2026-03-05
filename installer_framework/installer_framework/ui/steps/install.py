@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from threading import Thread
-
-from kivy.clock import Clock
-from kivy.metrics import dp
-from kivy.uix.label import Label
-from kivy.uix.progressbar import ProgressBar
+from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal, pyqtSlot
+from PyQt6.QtWidgets import QLabel, QProgressBar
 
 from installer_framework.engine.runner import ActionRunner
 from installer_framework.ui.step_base import StepWidget
@@ -16,25 +12,63 @@ from installer_framework.ui.widgets.dialogs import show_message_dialog
 from installer_framework.ui.widgets.log_pane import LogPane
 
 
+class InstallWorker(QObject):
+    progress = pyqtSignal(int, str)
+    log = pyqtSignal(str)
+    message = pyqtSignal(str, str, str)
+    finished = pyqtSignal(object)
+
+    def __init__(self, ctx) -> None:
+        super().__init__()
+        self.ctx = ctx
+
+    @pyqtSlot()
+    def run(self) -> None:
+        runner = ActionRunner(self.ctx.config.actions)
+
+        result = runner.run(
+            self.ctx,
+            progress_callback=lambda value, message: self.progress.emit(value, message),
+            log_callback=lambda message: self.log.emit(message),
+            message_callback=lambda level, title, message: self.message.emit(level, title, message),
+        )
+
+        self.ctx.state.result_summary = {
+            "success": result.success,
+            "cancelled": result.cancelled,
+            "error": result.error,
+            "results": result.results,
+            "install_dir": self.ctx.state.install_dir,
+            "scope": self.ctx.state.install_scope,
+            "features": self.ctx.state.selected_features,
+        }
+        self.ctx.save_resume()
+        self.finished.emit(result)
+
+
 class InstallStep(StepWidget):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.started = False
+        self._thread: QThread | None = None
+        self._worker: InstallWorker | None = None
 
         group = ClassicGroupBox(theme=self.theme, title="Installing")
-        self.progress_label = Label(text="Preparing installation...", color=self.theme.text_primary, size_hint_y=None, height=dp(24), halign="left", valign="middle")
-        self.progress_label.bind(size=lambda instance, value: setattr(instance, "text_size", value))
-        if self.theme.font_name:
-            self.progress_label.font_name = self.theme.font_name
+        self.progress_label = QLabel("Preparing installation...")
+        self.progress_label.setStyleSheet(f"color: {self.theme.text_primary};")
+        self.progress_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
-        self.progress = ProgressBar(max=100, value=0, size_hint_y=None, height=dp(20))
-        self.log_pane = LogPane(size_hint=(1, 1))
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
 
-        group.content.add_widget(self.progress_label)
-        group.content.add_widget(self.progress)
-        group.content.add_widget(self.log_pane)
+        self.log_pane = LogPane()
 
-        self.add_widget(group)
+        group.content_layout.addWidget(self.progress_label)
+        group.content_layout.addWidget(self.progress)
+        group.content_layout.addWidget(self.log_pane)
+
+        self.main_layout.addWidget(group)
 
     def on_show(self) -> None:
         if not self.started:
@@ -42,33 +76,27 @@ class InstallStep(StepWidget):
             self.start_install()
 
     def start_install(self) -> None:
-        runner = ActionRunner(self.ctx.config.actions)
+        self._thread = QThread(self)
+        self._worker = InstallWorker(self.ctx)
+        self._worker.moveToThread(self._thread)
 
-        def progress_cb(value: int, message: str) -> None:
-            Clock.schedule_once(lambda *_: self._set_progress(value, message), 0)
+        self._thread.started.connect(self._worker.run)
+        self._worker.progress.connect(self._set_progress)
+        self._worker.log.connect(self.log_pane.append)
+        self._worker.message.connect(show_message_dialog)
+        self._worker.finished.connect(self._on_finished)
 
-        def log_cb(message: str) -> None:
-            Clock.schedule_once(lambda *_: self.log_pane.append(message), 0)
+        self._worker.finished.connect(self._thread.quit)
+        self._worker.finished.connect(self._worker.deleteLater)
+        self._thread.finished.connect(self._thread.deleteLater)
 
-        def message_cb(level: str, title: str, message: str) -> None:
-            Clock.schedule_once(lambda *_: show_message_dialog(level, title, message), 0)
+        self._thread.start()
 
-        def worker() -> None:
-            result = runner.run(self.ctx, progress_cb, log_cb, message_callback=message_cb)
-            self.ctx.state.result_summary = {
-                "success": result.success,
-                "cancelled": result.cancelled,
-                "error": result.error,
-                "results": result.results,
-                "install_dir": self.ctx.state.install_dir,
-                "scope": self.ctx.state.install_scope,
-                "features": self.ctx.state.selected_features,
-            }
-            self.ctx.save_resume()
-            Clock.schedule_once(lambda *_: self.wizard.on_install_finished(result), 0)
-
-        Thread(target=worker, daemon=True).start()
-
+    @pyqtSlot(int, str)
     def _set_progress(self, value: int, message: str) -> None:
-        self.progress.value = value
-        self.progress_label.text = f"{value}% - {message}"
+        self.progress.setValue(value)
+        self.progress_label.setText(f"{value}% - {message}")
+
+    @pyqtSlot(object)
+    def _on_finished(self, result) -> None:
+        self.wizard.on_install_finished(result)
