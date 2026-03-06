@@ -219,8 +219,7 @@ $CommonArgs = @(
   "--hidden-import", "PyQt6.sip",
   "--add-data", "examples;examples",
   "--add-data", "$PackagedConfigFile;build",
-  "--add-data", "installer_framework/config/schema.json;installer_framework/config",
-  "--add-data", "tools;tools"
+  "--add-data", "installer_framework/config/schema.json;installer_framework/config"
 )
 
 if ($IconPath) {
@@ -274,9 +273,16 @@ Invoke-PyInstaller -ArgsList $UninstallerArgs
 if (-not (Test-Path "dist/tips-uninstaller.exe")) {
   throw "Expected dist/tips-uninstaller.exe after build, but it was not generated."
 }
+Write-Host "Built uninstaller binary: dist/tips-uninstaller.exe"
 Copy-Item -Force "dist/tips-uninstaller.exe" $BundledUninstaller
 
-$InstallerArgs = @($CommonArgs + @("--name", "tips-installer", "installer_framework/main.py"))
+$InstallerArgs = @(
+  $CommonArgs + @(
+    "--add-data", "$BundledUninstaller;tools",
+    "--name", "tips-installer",
+    "installer_framework/main.py"
+  )
+)
 Invoke-PyInstaller -ArgsList $InstallerArgs
 
 Copy-Item -Force "dist/tips-installer.exe" (Join-Path $OutDir "tips-installer.exe")

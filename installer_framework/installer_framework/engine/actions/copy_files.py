@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -26,16 +27,60 @@ class CopyFilesAction(Action):
         if local.exists():
             return local
 
+        bundled_candidates = self._resolve_bundled_path(Path(manifest_file), ctx)
+        if bundled_candidates:
+            return bundled_candidates
+
+        raise FileNotFoundError(f"copy_files manifest not found: {manifest_file}")
+
+    def _resolve_bundled_path(self, relative_path: Path, ctx: InstallerContext) -> Path | None:
+        rel = Path(relative_path)
+        candidates: list[Path] = [rel]
+
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            bundled_root = Path(meipass)
+            candidates.extend(
+                [
+                    bundled_root / rel,
+                    bundled_root / "examples" / rel,
+                ]
+            )
+
+            # Source config in frozen builds is often copied into build/<name>,
+            # while actual assets may still live under examples.
+            try:
+                source_root = Path(ctx.config.source_root)
+                candidates.append(bundled_root / source_root.name / rel)
+            except Exception:
+                pass
+
+        if getattr(sys, "frozen", False):
+            candidates.append(Path.cwd() / rel)
+
         try:
             from installer_framework.app.resources import resource_path
 
-            bundled = resource_path(manifest_file)
-            if bundled.exists():
-                return bundled
+            bundled = resource_path(str(rel))
+            candidates.append(bundled)
+            candidates.append(resource_path("examples") / rel)
         except Exception:
             pass
 
-        raise FileNotFoundError(f"copy_files manifest not found: {manifest_file}")
+        if meipass:
+            expected = str(rel).replace("\\", "/")
+            for candidate in Path(meipass).rglob(rel.name):
+                candidate_key = str(candidate.as_posix())
+                if candidate_key.endswith("/" + expected) or candidate_key == expected:
+                    candidates.append(candidate)
+
+        for candidate in candidates:
+            try:
+                if candidate.exists() and candidate.is_file():
+                    return candidate
+            except Exception:
+                continue
+        return None
 
     def _load_manifest(self, manifest_path: Path) -> list[dict[str, Any]]:
         try:
@@ -91,14 +136,9 @@ class CopyFilesAction(Action):
         if from_source_root.exists():
             return from_source_root
 
-        try:
-            from installer_framework.app.resources import resource_path
-
-            bundled = resource_path(source)
-            if bundled.exists():
-                return bundled
-        except Exception:
-            pass
+        bundled_candidates = self._resolve_bundled_path(Path(source), ctx)
+        if bundled_candidates:
+            return bundled_candidates
 
         raise FileNotFoundError(f"copy_files source not found: {source}")
 

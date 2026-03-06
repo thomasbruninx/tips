@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from installer_framework.engine.uninstall_runner import UninstallOptions
@@ -33,7 +34,11 @@ def resolve_manifest(args: argparse.Namespace) -> Path:
         return Path(args.manifest).expanduser().resolve()
     if args.install_dir:
         return (Path(args.install_dir).expanduser().resolve() / ".tips" / "manifest.json")
-    raise ValueError("Either --manifest or --install-dir must be specified")
+    exe_dir = Path(sys.argv[0]).resolve().parent
+    manifest_file = exe_dir / ".tips" / "manifest.json"
+    if manifest_file.exists():
+        return manifest_file
+    raise ValueError("Either --manifest, --install-dir, or a neighboring .tips/manifest.json is required")
 
 
 def main() -> int:

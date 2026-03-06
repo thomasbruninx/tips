@@ -22,6 +22,7 @@ from installer_framework.engine.manifest import (
     tips_meta_dir,
     uninstall_script_path,
     utc_now_iso,
+    WINDOWS_UNINSTALLER_NAME,
     windows_uninstaller_path,
 )
 from installer_framework.util.fs import ensure_dir, expand_user
@@ -467,14 +468,42 @@ if __name__ == "__main__":
         return script_path, link_path
 
     def _install_windows_uninstaller(self) -> Path | None:
-        src = resource_path("tools/tips-uninstaller.exe")
-        if not src.exists():
-            self.log("Windows uninstaller binary not bundled; skipping drop into install directory")
+        src = self._resolve_windows_uninstaller_source()
+        if src is None:
+            self.log("Windows uninstaller binary not found in any known location; skipping drop into install directory")
             return None
         dst = windows_uninstaller_path(self.install_dir)
         ensure_dir(dst.parent)
         shutil.copy2(src, dst)
         return dst
+
+    def _resolve_windows_uninstaller_source(self) -> Path | None:
+        candidates: list[Path] = []
+
+        candidates.append(resource_path("tools/tips-uninstaller.exe"))
+        candidates.append(Path.cwd() / "tools" / WINDOWS_UNINSTALLER_NAME)
+
+        try:
+            installer_runtime_dir = Path(sys.argv[0]).resolve().parent
+        except Exception:
+            installer_runtime_dir = None
+
+        if installer_runtime_dir:
+            candidates.append(installer_runtime_dir / WINDOWS_UNINSTALLER_NAME)
+
+        candidates.append(Path("dist") / "windows" / WINDOWS_UNINSTALLER_NAME)
+
+        for candidate in candidates:
+            if candidate.exists():
+                if candidate.is_file():
+                    self.log(f"Using Windows uninstaller source: {candidate}")
+                    return candidate
+                self.log(f"Windows uninstaller path exists but is not a file: {candidate}")
+
+        self.log("Windows uninstaller source candidates checked:")
+        for candidate in candidates:
+            self.log(f" - {candidate}")
+        return None
 
     def finalize_success(self, action_results: list[dict[str, Any]]) -> Path:
         ensure_meta_layout(self.install_dir)

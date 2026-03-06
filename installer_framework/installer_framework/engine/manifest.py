@@ -44,7 +44,7 @@ def uninstall_script_path(install_dir: str | Path) -> Path:
 
 
 def windows_uninstaller_path(install_dir: str | Path) -> Path:
-    return tips_meta_dir(install_dir) / WINDOWS_UNINSTALLER_NAME
+    return Path(install_dir) / WINDOWS_UNINSTALLER_NAME
 
 
 def ensure_meta_layout(install_dir: str | Path) -> None:
