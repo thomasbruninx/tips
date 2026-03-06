@@ -185,6 +185,9 @@ if ($env:PYTHON) {
 
 $ResolvedConfigPath = Resolve-ConfigPath $ConfigPath
 Assert-ValidConfigJson $ResolvedConfigPath
+$PackagedConfigFile = Join-Path $ProjectRoot "build/packaged_installer_config.json"
+New-Item -ItemType Directory -Path (Split-Path -Parent $PackagedConfigFile) -Force | Out-Null
+Copy-Item -Path $ResolvedConfigPath -Destination $PackagedConfigFile -Force
 $IconPath = Get-WindowsIconPath $ResolvedConfigPath
 $TypographyFontEntries = Get-TypographyFontDataEntries $ResolvedConfigPath
 $RepoRoot = Resolve-Path (Join-Path $ProjectRoot "..")
@@ -215,6 +218,7 @@ $CommonArgs = @(
   "--hidden-import", "PyQt6.QtWidgets",
   "--hidden-import", "PyQt6.sip",
   "--add-data", "examples;examples",
+  "--add-data", "$PackagedConfigFile;build",
   "--add-data", "installer_framework/config/schema.json;installer_framework/config",
   "--add-data", "tools;tools"
 )

@@ -20,8 +20,8 @@ def test_parse_args_supports_plugins_dir(monkeypatch):
 
 def test_parse_args_requires_config(monkeypatch):
     monkeypatch.setattr("sys.argv", ["prog"])
-    with pytest.raises(SystemExit):
-        main.parse_args()
+    args = main.parse_args()
+    assert args.config is None
 
 
 def test_resolve_config_path_prefers_existing_cwd_file(tmp_path, monkeypatch):
@@ -39,3 +39,17 @@ def test_resolve_config_path_falls_back_to_resource(monkeypatch, tmp_path):
     monkeypatch.setattr(main, "resource_path", lambda _arg: bundled)
     resolved = main.resolve_config_path("missing.json")
     assert resolved == bundled
+
+
+def test_resolve_runtime_config_arg_source_requires_config(monkeypatch):
+    monkeypatch.setattr(main, "is_frozen_runtime", lambda: False)
+    with pytest.raises(SystemExit):
+        main.resolve_runtime_config_arg(None)
+
+
+def test_resolve_runtime_config_arg_frozen_uses_packaged(monkeypatch, tmp_path):
+    marker = tmp_path / "packaged_installer_config.json"
+    marker.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(main, "is_frozen_runtime", lambda: True)
+    monkeypatch.setattr(main, "resource_path", lambda _arg: marker)
+    assert main.resolve_runtime_config_arg(None) == main.PACKAGED_CONFIG_PATH

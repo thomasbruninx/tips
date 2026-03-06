@@ -599,6 +599,7 @@ Use plugins instead of editing core mappings.
 
 All scripts output to `dist/<platform>/`.
 All build scripts require an explicit JSON config path and fail fast when the path is missing, does not exist, or contains invalid JSON.
+The provided build config is bundled as the packaged app's default runtime config (for launches without CLI args).
 
 ### Windows
 

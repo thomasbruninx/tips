@@ -72,6 +72,9 @@ if not isinstance(payload, dict):
     print(f"Error: config root must be a JSON object: {config_path}", file=sys.stderr)
     raise SystemExit(1)
 PY
+PACKAGED_CONFIG_FILE="$PROJECT_ROOT/build/packaged_installer_config.json"
+mkdir -p "$(dirname "$PACKAGED_CONFIG_FILE")"
+cp "$CONFIG_PATH" "$PACKAGED_CONFIG_FILE"
 
 resolve_typography_font_data_entries() {
   "$PYTHON_BIN" - "$PROJECT_ROOT" "$CONFIG_PATH" <<'PY'
@@ -178,6 +181,7 @@ PYINSTALLER_ARGS=(
   --hidden-import PyQt6.QtWidgets
   --hidden-import PyQt6.sip
   --add-data "examples:examples"
+  --add-data "$PACKAGED_CONFIG_FILE:build"
   --add-data "installer_framework/config/schema.json:installer_framework/config"
 )
 
