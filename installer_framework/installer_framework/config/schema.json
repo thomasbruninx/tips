@@ -164,9 +164,12 @@
               "run_script"
             ]
           },
+          "rollback": {"type": "string", "enum": ["auto", "delete_only", "none"]},
           "target_path": {"type": "string", "minLength": 1},
           "append": {"type": "boolean"},
-          "content": {}
+          "content": {},
+          "undo_path": {"type": "string"},
+          "uninstall_path": {"type": "string"}
         },
         "allOf": [
           {
@@ -184,6 +187,21 @@
                   {"required": ["file_name"]}
                 ]
               }
+            }
+          },
+          {
+            "if": {
+              "properties": {"type": {"const": "run_script"}},
+              "required": ["type"]
+            },
+            "then": {
+              "anyOf": [
+                {
+                  "properties": {"rollback": {"const": "none"}},
+                  "required": ["rollback"]
+                },
+                {"required": ["undo_path"]}
+              ]
             }
           }
         ],
@@ -215,6 +233,23 @@
     },
     "shortcut": {"type": "object", "additionalProperties": true},
     "upgrade": {"type": "object", "additionalProperties": true},
+    "uninstall": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "modified_file_policy": {"type": "string", "enum": ["prompt", "skip", "delete"]},
+        "unix": {
+          "type": "object",
+          "properties": {
+            "create_symlink": {"type": "boolean"},
+            "user_link_path": {"type": "string"},
+            "system_link_path": {"type": "string"}
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
     "hooks": {"type": "object", "additionalProperties": true}
   },
   "additionalProperties": true

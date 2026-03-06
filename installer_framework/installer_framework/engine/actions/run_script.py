@@ -26,6 +26,13 @@ class RunScriptAction(Action):
         script_path = self._resolve_script(ctx, self.params["path"])
         if not script_path.exists():
             raise FileNotFoundError(f"Script hook not found: {script_path}")
+        rollback_policy = getattr(ctx, "action_rollback_policy", "auto")
+        undo_path = self.params.get("undo_path")
+        uninstall_path = self.params.get("uninstall_path")
+        if rollback_policy != "none" and not undo_path:
+            raise ValueError("run_script requires 'undo_path' unless rollback policy is 'none'")
+        resolved_undo_path = str(self._resolve_script(ctx, undo_path)) if undo_path else None
+        resolved_uninstall_path = str(self._resolve_script(ctx, uninstall_path)) if uninstall_path else None
 
         install_dir = Path(ctx.state.install_dir)
 
@@ -89,4 +96,19 @@ class RunScriptAction(Action):
 
         progress(100, f"Script executed: {script_path.name}")
         log(f"Hook script executed: {script_path}")
-        return {"action": "run_script", "path": str(script_path)}
+        rollback_records: list[dict[str, Any]] = []
+        if undo_path or uninstall_path:
+            rollback_records.append(
+                {
+                    "kind": "script_hook",
+                    "path": str(script_path),
+                    "undo_path": resolved_undo_path,
+                    "uninstall_path": resolved_uninstall_path,
+                }
+            )
+
+        return {
+            "action": "run_script",
+            "path": str(script_path),
+            "rollback_records": rollback_records,
+        }

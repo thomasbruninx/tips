@@ -80,7 +80,24 @@ def validate_config_semantics(config: InstallerConfig) -> None:
         raise ConfigValidationError("At least one install action is required")
 
     for action in config.actions:
+        if action.rollback not in {"auto", "delete_only", "none"}:
+            raise ConfigValidationError(
+                f"Unsupported rollback policy '{action.rollback}' for action type '{action.type}'"
+            )
+
         if action.type != "write_dotfile":
+            if action.type == "run_script" and action.rollback != "none":
+                if "undo_path" not in action.params:
+                    raise ConfigValidationError(
+                        "run_script requires 'undo_path' unless rollback policy is set to 'none'"
+                    )
+            if action.type == "run_script":
+                undo_path = action.params.get("undo_path")
+                uninstall_path = action.params.get("uninstall_path")
+                if undo_path is not None and not isinstance(undo_path, str):
+                    raise ConfigValidationError("run_script 'undo_path' must be a string when provided")
+                if uninstall_path is not None and not isinstance(uninstall_path, str):
+                    raise ConfigValidationError("run_script 'uninstall_path' must be a string when provided")
             continue
         params = action.params
         target_path = params.get("target_path")
@@ -99,6 +116,18 @@ def validate_config_semantics(config: InstallerConfig) -> None:
                 + ", ".join(used_legacy)
                 + ". Use 'target_path' instead."
             )
+
+    if config.uninstall.modified_file_policy not in {"prompt", "skip", "delete"}:
+        raise ConfigValidationError(
+            "uninstall.modified_file_policy must be one of: prompt, skip, delete"
+        )
+    unix_settings = config.uninstall.unix
+    for name, value in (
+        ("uninstall.unix.user_link_path", unix_settings.user_link_path),
+        ("uninstall.unix.system_link_path", unix_settings.system_link_path),
+    ):
+        if value is not None and not str(value).strip():
+            raise ConfigValidationError(f"{name} must be a non-empty string when provided")
 
     _validate_theme(config)
 

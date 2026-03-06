@@ -9,6 +9,7 @@ from typing import Any
 
 from installer_framework.engine.action_base import Action
 from installer_framework.engine.context import InstallerContext
+from installer_framework.engine.manifest import file_sha256
 from installer_framework.util.fs import ensure_dir
 
 
@@ -74,6 +75,17 @@ class WriteDotfileAction(Action):
         if not target.parent.exists():
             ensure_dir(target.parent)
 
+        existed_before = target.exists()
+        backup_path: str | None = None
+        rollback_policy = getattr(ctx, "action_rollback_policy", "auto")
+        if existed_before and rollback_policy == "auto" and target.is_file():
+            tx = getattr(ctx, "transaction", None)
+            if tx is not None:
+                try:
+                    backup_path = str(tx.create_file_backup(target))
+                except Exception:
+                    backup_path = None
+
         payload = self._render_payload(ctx, content)
         if append:
             if not payload.endswith("\n"):
@@ -89,4 +101,18 @@ class WriteDotfileAction(Action):
             log(f"Dotfile written: {target}")
             mode = "write"
 
-        return {"action": "write_dotfile", "path": str(target), "mode": mode}
+        hash_after = file_sha256(target) if target.exists() and target.is_file() else None
+        return {
+            "action": "write_dotfile",
+            "path": str(target),
+            "mode": mode,
+            "rollback_records": [
+                {
+                    "kind": "file",
+                    "path": str(target),
+                    "existed_before": existed_before,
+                    "backup_path": backup_path,
+                    "hash_after": hash_after,
+                }
+            ],
+        }

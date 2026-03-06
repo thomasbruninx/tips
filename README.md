@@ -35,6 +35,15 @@ This project provides a JSON-driven, **PyQt6**-based installer framework for Win
   - `create_desktop_entry` (Linux)
   - `show_message`
   - `run_script` (restricted context)
+- Transactional install safety:
+  - per-action rollback policy (`auto`, `delete_only`, `none`)
+  - rollback journal during install
+  - automatic rollback on failure or cancellation
+- Manifest-driven uninstall:
+  - tracked artifacts in `install_dir/.tips/manifest.json`
+  - Windows GUI uninstaller executable
+  - Linux/macOS CLI uninstaller script
+  - modified-file handling (`prompt`/`skip`/`delete`)
 - Upgrade detection:
   - Windows registry (HKCU/HKLM)
   - Unix metadata file in user/system config paths
@@ -49,8 +58,11 @@ installer_framework/
   LICENSE
   installer_framework/
     main.py
+    uninstaller_main.py
+    uninstall_cli.py
     app/
       qt_app.py
+      qt_uninstaller_app.py
       paths.py
       resources.py
     config/
@@ -74,6 +86,7 @@ installer_framework/
         ready.py
         install.py
         finish.py
+      uninstall_wizard.py
       widgets/
         theme.py
         classic_theme.py
@@ -85,6 +98,9 @@ installer_framework/
     engine/
       context.py
       runner.py
+      manifest.py
+      rollback.py
+      uninstall_runner.py
       action_base.py
       actions/
         copy_files.py
@@ -308,6 +324,53 @@ Notes:
   - `system_base`
   - `file_name`
 
+### Rollback Policy
+
+Every action accepts optional:
+
+```json
+"rollback": "auto"
+```
+
+Values:
+- `auto` (default): restore previous state where possible; remove created artifacts.
+- `delete_only`: remove created artifacts only (no restore of overwritten originals).
+- `none`: skip rollback for that action.
+
+### `run_script` rollback/uninstall hooks
+
+For `run_script`, `undo_path` is required unless `rollback` is explicitly `none`.
+Optional `uninstall_path` can be used to run dedicated uninstall logic.
+
+```json
+{
+  "type": "run_script",
+  "path": "hooks/install_hook.py",
+  "undo_path": "hooks/undo_hook.py",
+  "uninstall_path": "hooks/uninstall_hook.py",
+  "rollback": "auto"
+}
+```
+
+### Uninstall block
+
+```json
+"uninstall": {
+  "enabled": true,
+  "modified_file_policy": "prompt",
+  "unix": {
+    "create_symlink": false,
+    "user_link_path": "~/.local/bin/<product_id>-uninstall",
+    "system_link_path": "/usr/local/bin/<product_id>-uninstall"
+  }
+}
+```
+
+`modified_file_policy`:
+- `prompt` (interactive mode)
+- `skip`
+- `delete`
+
 ## Install Scope Paths and Permissions
 
 ### Windows
@@ -320,6 +383,14 @@ Optional UAC relaunch:
 ```json
 "windows": { "allow_uac_elevation": true }
 ```
+
+Windows uninstall registration (ARP) is written under HKCU/HKLM based on install scope using:
+- `DisplayName`
+- `Publisher`
+- `DisplayVersion`
+- `InstallLocation`
+- `UninstallString`
+- `QuietUninstallString`
 
 ### Linux
 - User: `~/.local/share/<product_id>`
@@ -367,7 +438,9 @@ All scripts output to `dist/<platform>/`.
 pwsh ./build/build_windows.ps1 -ConfigPath examples/sample_installer.json
 ```
 
-Output: `dist/windows/tips-installer.exe`
+Outputs:
+- `dist/windows/tips-installer.exe`
+- `dist/windows/tips-uninstaller.exe`
 
 ### Linux
 
@@ -394,6 +467,43 @@ Output: `dist/macos/tips-installer.app`
   - `--hidden-import PyQt6.sip`
 - If startup fails with Qt plugin errors, inspect packaged `platforms` plugin files.
 - If assets are missing, verify `--add-data` paths for `examples` and `schema.json`.
+
+## Rollback and Uninstall Usage
+
+- Install journal: `install_dir/.tips/rollback_journal.json`
+- Install manifest: `install_dir/.tips/manifest.json`
+
+On install failure/cancel:
+- completed actions are rolled back in reverse order
+- rollback errors are reported separately from the original failure
+
+### Windows uninstaller (GUI)
+
+```powershell
+tips-uninstaller --manifest "C:\\Path\\To\\Install\\.tips\\manifest.json"
+```
+
+Silent:
+
+```powershell
+tips-uninstaller --manifest "C:\\Path\\To\\Install\\.tips\\manifest.json" --silent
+```
+
+### Linux/macOS uninstaller (CLI)
+
+Generated script (inside install dir):
+
+```bash
+python3 /path/to/install/.tips/uninstall.py
+```
+
+The generated Unix script is self-contained and does not require `installer_framework` to be installed on the target machine.
+
+Silent + force modified deletion:
+
+```bash
+python3 /path/to/install/.tips/uninstall.py --silent --delete-modified
+```
 
 ## Security Notes
 

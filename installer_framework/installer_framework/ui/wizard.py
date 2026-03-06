@@ -11,6 +11,7 @@ from installer_framework.app.paths import default_install_dir
 from installer_framework.config.conditions import evaluate_condition
 from installer_framework.config.models import InstallerConfig, StepConfig
 from installer_framework.engine.context import InstallerContext
+from installer_framework.engine.manifest import manifest_path
 from installer_framework.engine.runner import ActionResult
 from installer_framework.ui.step_factory import StepFactory
 from installer_framework.ui.theme import UITheme, get_active_theme
@@ -264,6 +265,20 @@ class Wizard(QMainWindow):
             return
         if not self._ensure_scope_privileges():
             return
+        if (
+            self.ctx.state.answers.get("upgrade_mode") == "uninstall_first"
+            and self.ctx.state.detected_upgrade
+        ):
+            detected_install_dir = self.ctx.state.detected_upgrade.get("install_dir")
+            lookup_dir = detected_install_dir if isinstance(detected_install_dir, str) and detected_install_dir else self.ctx.state.install_dir
+            uninstall_manifest = manifest_path(lookup_dir)
+            if not uninstall_manifest.exists():
+                show_message_dialog(
+                    "error",
+                    "Uninstall manifest not found",
+                    f"Uninstall-first mode requires an existing manifest at:\n{uninstall_manifest}",
+                )
+                return
         install_index = self._index_of_type("install")
         self.show_step(install_index)
 
@@ -272,9 +287,18 @@ class Wizard(QMainWindow):
             show_message_dialog("info", "Install complete", "Installation completed successfully.")
             self.ctx.clear_resume()
         elif result.cancelled:
-            show_message_dialog("warn", "Install cancelled", "Installation was cancelled.")
+            pass
         else:
-            show_message_dialog("error", "Install failed", result.error or "Unknown error")
+            detail = result.error or "Unknown error"
+            if result.rollback_performed and result.rollback_errors:
+                detail = f"{detail}\n\nRollback completed with errors:\n" + "\n".join(result.rollback_errors)
+            elif result.rollback_performed:
+                detail = f"{detail}\n\nRollback completed."
+            show_message_dialog("error", "Install failed", detail)
+            if result.error and result.error.startswith("Uninstall-first"):
+                ready_idx = self._index_of_type("ready")
+                self.show_step(ready_idx)
+                return
 
         finish_idx = self._index_of_type("finish")
         self.show_step(finish_idx)

@@ -8,6 +8,7 @@ from typing import Any
 
 from installer_framework.engine.action_base import Action
 from installer_framework.engine.context import InstallerContext
+from installer_framework.engine.manifest import file_sha256
 from installer_framework.util.fs import ensure_dir
 
 
@@ -60,20 +61,58 @@ class CreateShortcutAction(Action):
         icon = self.params.get("icon")
 
         created: list[str] = []
+        records: list[dict[str, Any]] = []
+        rollback_policy = getattr(ctx, "action_rollback_policy", "auto")
         if self.params.get("start_menu", True):
             folder = ensure_dir(self._start_menu_dir(ctx.state.install_scope))
             path = folder / f"{app_name}.lnk"
+            existed_before = path.exists()
+            backup_path: str | None = None
+            if existed_before and rollback_policy == "auto":
+                tx = getattr(ctx, "transaction", None)
+                if tx is not None:
+                    try:
+                        backup_path = str(tx.create_file_backup(path))
+                    except Exception:
+                        backup_path = None
             if self._create_shortcut(path, target, icon, log):
                 created.append(str(path))
+                records.append(
+                    {
+                        "kind": "file",
+                        "path": str(path),
+                        "existed_before": existed_before,
+                        "backup_path": backup_path,
+                        "hash_after": file_sha256(path) if path.exists() and path.is_file() else None,
+                    }
+                )
 
         if self.params.get("desktop", False):
             folder = ensure_dir(self._desktop_dir(ctx.state.install_scope))
             path = folder / f"{app_name}.lnk"
+            existed_before = path.exists()
+            backup_path: str | None = None
+            if existed_before and rollback_policy == "auto":
+                tx = getattr(ctx, "transaction", None)
+                if tx is not None:
+                    try:
+                        backup_path = str(tx.create_file_backup(path))
+                    except Exception:
+                        backup_path = None
             if self._create_shortcut(path, target, icon, log):
                 created.append(str(path))
+                records.append(
+                    {
+                        "kind": "file",
+                        "path": str(path),
+                        "existed_before": existed_before,
+                        "backup_path": backup_path,
+                        "hash_after": file_sha256(path) if path.exists() and path.is_file() else None,
+                    }
+                )
 
         progress(100, "Shortcut creation complete")
-        return {"action": "create_shortcut", "created": created}
+        return {"action": "create_shortcut", "created": created, "rollback_records": records}
 
     def _create_shortcut(self, path: Path, target: str, icon: str | None, log) -> bool:
         try:

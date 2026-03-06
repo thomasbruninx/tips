@@ -99,6 +99,7 @@ class FeatureConfig:
 @dataclass(slots=True)
 class ActionConfig:
     type: str
+    rollback: str = "auto"
     params: dict[str, Any] = field(default_factory=dict)
 
 
@@ -117,6 +118,20 @@ class UpgradeSettings:
 
 
 @dataclass(slots=True)
+class UninstallUnixSettings:
+    create_symlink: bool = False
+    user_link_path: str | None = None
+    system_link_path: str | None = None
+
+
+@dataclass(slots=True)
+class UninstallSettings:
+    enabled: bool = True
+    modified_file_policy: str = "prompt"
+    unix: UninstallUnixSettings = field(default_factory=UninstallUnixSettings)
+
+
+@dataclass(slots=True)
 class InstallerConfig:
     branding: BrandingConfig
     product_id: str
@@ -129,6 +144,7 @@ class InstallerConfig:
     unix: dict[str, Any] = field(default_factory=dict)
     shortcut: ShortcutSettings = field(default_factory=ShortcutSettings)
     upgrade: UpgradeSettings = field(default_factory=UpgradeSettings)
+    uninstall: UninstallSettings = field(default_factory=UninstallSettings)
     hooks: dict[str, Any] = field(default_factory=dict)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
     source_root: Path = field(default_factory=lambda: Path.cwd())
@@ -183,7 +199,8 @@ def _feature_from_dict(data: dict[str, Any]) -> FeatureConfig:
 def _action_from_dict(data: dict[str, Any]) -> ActionConfig:
     payload = dict(data)
     action_type = payload.pop("type")
-    return ActionConfig(type=action_type, params=payload)
+    rollback = str(payload.pop("rollback", "auto"))
+    return ActionConfig(type=action_type, rollback=rollback, params=payload)
 
 
 
@@ -277,6 +294,15 @@ def installer_config_from_dict(data: dict[str, Any], source_root: Path | None = 
         unix=dict(data.get("unix", {})),
         shortcut=ShortcutSettings(**data.get("shortcut", {})),
         upgrade=UpgradeSettings(**data.get("upgrade", {})),
+        uninstall=UninstallSettings(
+            enabled=bool(data.get("uninstall", {}).get("enabled", True)),
+            modified_file_policy=str(data.get("uninstall", {}).get("modified_file_policy", "prompt")),
+            unix=UninstallUnixSettings(
+                create_symlink=bool((data.get("uninstall", {}).get("unix", {}) or {}).get("create_symlink", False)),
+                user_link_path=(data.get("uninstall", {}).get("unix", {}) or {}).get("user_link_path"),
+                system_link_path=(data.get("uninstall", {}).get("unix", {}) or {}).get("system_link_path"),
+            ),
+        ),
         hooks=dict(data.get("hooks", {})),
         theme=_theme_from_dict(data.get("theme", {})),
         source_root=source_root or Path.cwd(),

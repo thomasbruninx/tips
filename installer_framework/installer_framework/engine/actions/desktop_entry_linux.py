@@ -7,6 +7,7 @@ from typing import Any
 
 from installer_framework.engine.action_base import Action
 from installer_framework.engine.context import InstallerContext
+from installer_framework.engine.manifest import file_sha256
 from installer_framework.util.fs import ensure_dir
 
 
@@ -32,6 +33,16 @@ class CreateDesktopEntryAction(Action):
             target = str(Path(ctx.state.install_dir) / self.params.get("exec_relative", app_name.lower()))
 
         path = self._entry_path(ctx.state.install_scope, app_id)
+        existed_before = path.exists()
+        backup_path: str | None = None
+        rollback_policy = getattr(ctx, "action_rollback_policy", "auto")
+        if existed_before and rollback_policy == "auto":
+            tx = getattr(ctx, "transaction", None)
+            if tx is not None:
+                try:
+                    backup_path = str(tx.create_file_backup(path))
+                except Exception:
+                    backup_path = None
         ensure_dir(path.parent)
         content = "\n".join(
             [
@@ -50,4 +61,16 @@ class CreateDesktopEntryAction(Action):
 
         progress(100, f"Desktop entry created at {path}")
         log(f"Desktop entry created: {path}")
-        return {"action": "create_desktop_entry", "path": str(path)}
+        return {
+            "action": "create_desktop_entry",
+            "path": str(path),
+            "rollback_records": [
+                {
+                    "kind": "file",
+                    "path": str(path),
+                    "existed_before": existed_before,
+                    "backup_path": backup_path,
+                    "hash_after": file_sha256(path) if path.exists() and path.is_file() else None,
+                }
+            ],
+        }

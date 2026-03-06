@@ -38,5 +38,8 @@ class FinishStep(StepWidget):
             "scope": result.get("scope"),
             "features": result.get("features"),
             "error": result.get("error"),
+            "rollback_performed": result.get("rollback_performed"),
+            "rollback_errors": result.get("rollback_errors"),
+            "manifest_path": result.get("manifest_path"),
         }
         self.summary.setText(f"{header}\n\n{json.dumps(details, indent=2)}\n\nClick Finish to close Setup.")

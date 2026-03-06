@@ -50,6 +50,15 @@
     "enabled": true,
     "store_file": "install-info.json"
   },
+  "uninstall": {
+    "enabled": true,
+    "modified_file_policy": "prompt",
+    "unix": {
+      "create_symlink": false,
+      "user_link_path": "~/.local/bin/tips-demo-app-uninstall",
+      "system_link_path": "/usr/local/bin/tips-demo-app-uninstall"
+    }
+  },
   "features": [
     {
       "id": "core",
@@ -184,6 +193,7 @@
   "actions": [
     {
       "type": "copy_files",
+      "rollback": "auto",
       "items": [
         {
           "from": "assets/payload",
@@ -194,6 +204,7 @@
     },
     {
       "type": "create_shortcut",
+      "rollback": "auto",
       "name": "TIPS Demo App",
       "target_relative": "README.txt",
       "desktop": true,
@@ -201,6 +212,7 @@
     },
     {
       "type": "create_desktop_entry",
+      "rollback": "auto",
       "id": "tips-demo-app",
       "name": "TIPS Demo App",
       "exec_relative": "README.txt",
@@ -208,28 +220,33 @@
     },
     {
       "type": "write_dotfile",
+      "rollback": "auto",
       "target_path": "~/.tips-demo-app/install-info.json"
     },
     {
       "type": "write_registry",
+      "rollback": "auto",
       "key_path": "Software\\TIPS\\tips-demo-app",
       "value_name": "Version",
       "value": "{version}"
     },
     {
       "type": "write_registry",
+      "rollback": "auto",
       "key_path": "Software\\TIPS\\tips-demo-app",
       "value_name": "InstallDir",
       "value": "{install_dir}"
     },
     {
       "type": "write_registry",
+      "rollback": "auto",
       "key_path": "Software\\TIPS\\tips-demo-app",
       "value_name": "Scope",
       "value": "{scope}"
     },
     {
       "type": "show_message",
+      "rollback": "none",
       "level": "info",
       "title": "Install Complete",
       "message": "Installed to {install_dir} ({scope} scope)."

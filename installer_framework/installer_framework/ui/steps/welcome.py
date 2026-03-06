@@ -15,7 +15,7 @@ class WelcomeStep(StepWidget):
 
         self.radio_in_place = QRadioButton("Upgrade in place")
         self.radio_change_dir = QRadioButton("Change installation directory")
-        self.radio_uninstall = QRadioButton("Uninstall first (placeholder)")
+        self.radio_uninstall = QRadioButton("Uninstall first")
 
         for radio in (self.radio_in_place, self.radio_change_dir, self.radio_uninstall):
             radio.setStyleSheet(f"QRadioButton {{ color: {self.theme.text_primary}; }}")
