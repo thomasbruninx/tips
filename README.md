@@ -1,4 +1,4 @@
-# TIPS Installer Framework
+# TIPS Framework
 
 TIPS = **TIPS Instructable Python Setup**.
 
