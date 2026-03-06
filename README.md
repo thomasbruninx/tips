@@ -170,6 +170,29 @@ python -m installer_framework.main --config examples/sample_installer.json --plu
 
 Resume state file: temp path `tips_installer_resume.json`.
 
+## Running Tests
+
+Install dev dependencies in the installer virtualenv:
+
+```bash
+cd installer_framework
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -e .[dev]
+```
+
+Run the full suite from repo root:
+
+```bash
+cd /Users/thomasbruninx/Projecten/tips
+./installer_framework/.venv/bin/python -m pytest tests -q
+```
+
+Run with coverage:
+
+```bash
+./installer_framework/.venv/bin/python -m pytest tests --cov=installer_framework/installer_framework --cov-report=term-missing
+```
+
 ## JSON Config Model
 
 Full schema: `installer_framework/config/schema.json`.
