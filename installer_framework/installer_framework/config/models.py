@@ -80,6 +80,8 @@ class StepConfig:
     type: str
     title: str
     description: str = ""
+    header_description: str | None = None
+    body_description: str | None = None
     fields: list[FieldConfig] = field(default_factory=list)
     show_if: str | None = None
     navigation: dict[str, Any] = field(default_factory=dict)
@@ -158,6 +160,8 @@ def _step_from_dict(data: dict[str, Any]) -> StepConfig:
         type=data["type"],
         title=data.get("title", data["id"]),
         description=data.get("description", ""),
+        header_description=data.get("header_description"),
+        body_description=data.get("body_description"),
         fields=[_field_from_dict(f) for f in data.get("fields", [])],
         show_if=data.get("show_if"),
         navigation=dict(data.get("navigation", {})),

@@ -44,12 +44,22 @@ class StepWidget(QWidget):
         label.setFixedHeight(30)
         return label
 
+    def resolved_body_description(self) -> str:
+        if self.step_config.body_description is not None:
+            return self.step_config.body_description
+        return self.step_config.description
+
     def description_label(self, text: str | None = None, height: int = 30) -> QLabel:
-        label = QLabel(text or self.step_config.description)
+        resolved = self.resolved_body_description() if text is None else text
+        label = QLabel(resolved)
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         label.setFont(self._font(self.theme.base_size if self.theme else 12))
         label.setStyleSheet(f"color: {self.theme.text_primary if self.theme else '#000'};")
+        if not resolved.strip():
+            label.setVisible(False)
+            label.setFixedHeight(0)
+            return label
         label.setFixedHeight(height)
         return label
 

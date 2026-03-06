@@ -75,7 +75,9 @@
       "id": "welcome",
       "type": "welcome",
       "title": "Welcome to TIPS Demo Setup",
-      "description": "This wizard will install TIPS Demo App on your computer."
+      "description": "This wizard will install TIPS Demo App on your computer.",
+      "header_description": "Setup Wizard for TIPS Demo App.",
+      "body_description": "This setup will guide you through the installation. Click Next to continue."
     },
     {
       "id": "license",
@@ -88,13 +90,15 @@
       "id": "scope",
       "type": "scope",
       "title": "Install Scope",
-      "description": "Choose whether to install for this user or all users."
+      "description": "Choose whether to install for this user or all users.",
+      "body_description": "Choose who can use this installation on this machine."
     },
     {
       "id": "directory",
       "type": "directory",
       "title": "Installation Directory",
       "description": "Select where the application should be installed.",
+      "body_description": "Choose the target folder where application files will be copied.",
       "fields": [
         {
           "id": "install_dir",
@@ -110,6 +114,7 @@
       "type": "options",
       "title": "Feature Selection",
       "description": "Select optional components.",
+      "body_description": "Select the optional components and defaults to install.",
       "fields": [
         {
           "id": "create_desktop_shortcut",
@@ -136,6 +141,7 @@
       "type": "form",
       "title": "Account Setup",
       "description": "Provide initial account details.",
+      "body_description": "Enter initial account credentials for the application.",
       "fields": [
         {
           "id": "username",

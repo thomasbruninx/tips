@@ -216,6 +216,13 @@ Implemented step types:
 - `install`
 - `finish`
 
+Step text fields:
+- `description`: legacy shared description used by header and body when no overrides are set.
+- `header_description`: optional override for the wizard header description.
+- `body_description`: optional override for the description rendered inside the step widget.
+
+You can hide one side explicitly by setting that override to an empty string.
+
 ### Validation Rules
 
 Field-level validation:

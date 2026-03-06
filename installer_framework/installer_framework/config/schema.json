@@ -90,6 +90,8 @@
           },
           "title": {"type": "string"},
           "description": {"type": "string"},
+          "header_description": {"type": "string"},
+          "body_description": {"type": "string"},
           "show_if": {"type": "string"},
           "license_path": {"type": "string"},
           "fields": {

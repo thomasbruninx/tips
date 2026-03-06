@@ -145,10 +145,14 @@ class Wizard(QMainWindow):
     def _set_header(self, step_cfg: StepConfig) -> None:
         self._clear_layout(self.header_layout)
         header_image = self.theme.header_image
+        if step_cfg.header_description is not None:
+            header_description = step_cfg.header_description
+        else:
+            header_description = step_cfg.description or f"Setup for {self.config.branding.product_name}"
         header = ClassicHeader(
             theme=self.theme,
             title=step_cfg.title,
-            description=step_cfg.description or f"Setup for {self.config.branding.product_name}",
+            description=header_description,
             image_path=str(header_image) if header_image else None,
         )
         self.header_layout.addWidget(header)

@@ -106,13 +106,13 @@ class ClassicHeader(ClassicPanel):
         title_lbl.setStyleSheet(f"color: {theme.text_primary};")
         _set_font(title_lbl, theme, theme.title_size, bold=True)
 
-        desc_lbl = QLabel(description)
-        desc_lbl.setWordWrap(True)
-        desc_lbl.setStyleSheet(f"color: {theme.text_primary};")
-        _set_font(desc_lbl, theme, theme.base_size)
-
         text_layout.addWidget(title_lbl)
-        text_layout.addWidget(desc_lbl)
+        if description.strip():
+            desc_lbl = QLabel(description)
+            desc_lbl.setWordWrap(True)
+            desc_lbl.setStyleSheet(f"color: {theme.text_primary};")
+            _set_font(desc_lbl, theme, theme.base_size)
+            text_layout.addWidget(desc_lbl)
         layout.addWidget(text_wrap, 1)
 
         if image_path:
