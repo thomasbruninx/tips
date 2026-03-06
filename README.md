@@ -8,7 +8,7 @@ This project provides a JSON-driven, **PyQt6**-based installer framework for Win
 
 - Installer shell UI themes:
   - `classic`
-  - `modern` (macOS Installer-like)
+  - `modern`
   - left branding/sidebar panel (classic)
   - top header + flat content shell (modern)
   - step header area
