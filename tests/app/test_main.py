@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from installer_framework import main
 
 
@@ -14,6 +16,12 @@ def test_parse_args_supports_plugins_dir(monkeypatch):
     assert args.config == "config.json"
     assert args.plugins_dir == "plugins"
     assert args.resume is True
+
+
+def test_parse_args_requires_config(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["prog"])
+    with pytest.raises(SystemExit):
+        main.parse_args()
 
 
 def test_resolve_config_path_prefers_existing_cwd_file(tmp_path, monkeypatch):
@@ -31,21 +39,3 @@ def test_resolve_config_path_falls_back_to_resource(monkeypatch, tmp_path):
     monkeypatch.setattr(main, "resource_path", lambda _arg: bundled)
     resolved = main.resolve_config_path("missing.json")
     assert resolved == bundled
-
-
-def test_resolve_default_config_arg_prefers_cli_value():
-    assert main.resolve_default_config_arg("examples/sample_installer_modern.json") == "examples/sample_installer_modern.json"
-
-
-def test_resolve_default_config_arg_reads_bundled_marker_when_frozen(monkeypatch, tmp_path):
-    marker = tmp_path / "default_config_path.txt"
-    marker.write_text("examples/sample_installer_modern.json\n", encoding="utf-8")
-    monkeypatch.setattr(main, "is_frozen_runtime", lambda: True)
-    monkeypatch.setattr(main, "resource_path", lambda _arg: marker)
-
-    assert main.resolve_default_config_arg(None) == "examples/sample_installer_modern.json"
-
-
-def test_resolve_default_config_arg_falls_back_to_framework_default(monkeypatch):
-    monkeypatch.setattr(main, "is_frozen_runtime", lambda: False)
-    assert main.resolve_default_config_arg(None) == main.DEFAULT_CONFIG

@@ -42,27 +42,6 @@ function Assert-ValidConfigJson([string]$ResolvedConfigPath) {
   }
 }
 
-function Get-BundledDefaultConfigPath([string]$ResolvedConfigPath) {
-  if (-not $ResolvedConfigPath) {
-    return "examples/sample_installer.json"
-  }
-
-  $projectRootPath = [System.IO.Path]::GetFullPath([string]$ProjectRoot)
-  $configPath = [System.IO.Path]::GetFullPath($ResolvedConfigPath)
-  $projectRootPrefix = $projectRootPath
-  if (-not $projectRootPrefix.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
-    $projectRootPrefix += [System.IO.Path]::DirectorySeparatorChar
-  }
-
-  if ($configPath.StartsWith($projectRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-    $relative = $configPath.Substring($projectRootPrefix.Length)
-    return $relative -replace "\\", "/"
-  }
-
-  Write-Warning "Config path is outside project root; bundled default falls back to examples/sample_installer.json"
-  return "examples/sample_installer.json"
-}
-
 function Get-WindowsIconPath([string]$ResolvedConfigPath) {
   if (-not $ResolvedConfigPath -or -not (Test-Path $ResolvedConfigPath)) {
     return $null
@@ -206,10 +185,6 @@ if ($env:PYTHON) {
 
 $ResolvedConfigPath = Resolve-ConfigPath $ConfigPath
 Assert-ValidConfigJson $ResolvedConfigPath
-$BundledDefaultConfigPath = Get-BundledDefaultConfigPath $ResolvedConfigPath
-$DefaultConfigMarker = Join-Path $ProjectRoot "build/default_config_path.txt"
-New-Item -ItemType Directory -Path (Split-Path -Parent $DefaultConfigMarker) -Force | Out-Null
-Set-Content -Path $DefaultConfigMarker -Value $BundledDefaultConfigPath -Encoding utf8
 $IconPath = Get-WindowsIconPath $ResolvedConfigPath
 $TypographyFontEntries = Get-TypographyFontDataEntries $ResolvedConfigPath
 $RepoRoot = Resolve-Path (Join-Path $ProjectRoot "..")
@@ -240,7 +215,6 @@ $CommonArgs = @(
   "--hidden-import", "PyQt6.QtWidgets",
   "--hidden-import", "PyQt6.sip",
   "--add-data", "examples;examples",
-  "--add-data", "$DefaultConfigMarker;build",
   "--add-data", "installer_framework/config/schema.json;installer_framework/config",
   "--add-data", "tools;tools"
 )
