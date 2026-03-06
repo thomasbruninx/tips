@@ -88,3 +88,13 @@ def test_load_config_fails_when_plugin_schema_requirement_missing(tmp_path, plug
 
     with pytest.raises(Exception):
         load_config(cfg_file, plugins_dir=str(root))
+
+
+def test_load_config_fails_for_copy_files_without_manifest_file(tmp_path):
+    payload = _base_payload()
+    payload["actions"] = [{"type": "copy_files"}]
+    cfg_file = tmp_path / "config.json"
+    cfg_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(Exception):
+        load_config(cfg_file)

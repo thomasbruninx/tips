@@ -322,6 +322,57 @@ Available symbols:
 - `selected_features`
 - `scope` / `install_scope`
 
+### `copy_files`
+
+`copy_files` now requires a manifest file and no longer accepts inline `items` or action-level `overwrite`.
+
+Action format:
+
+```json
+{
+  "type": "copy_files",
+  "rollback": "auto",
+  "manifest_file": "assets/copy_manifest.json",
+  "preserve_permissions": true
+}
+```
+
+Manifest file format:
+
+```json
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "source": "assets/payload/README.txt",
+      "target": "README.txt"
+    },
+    {
+      "source": "assets/payload/README.txt",
+      "target": "docs/README.txt",
+      "overwrite": false
+    }
+  ]
+}
+```
+
+Rules:
+- `schema_version` must be `1`.
+- `files` must be a non-empty array.
+- each file entry requires:
+  - `source` (file path)
+  - `target` (install-relative target file path)
+  - optional `overwrite` (default `true`)
+- absolute targets are rejected.
+- path traversal outside install directory (for example `../`) is rejected.
+- sources are resolved from manifest-relative path first, then config directory, then bundled resources.
+
+Migration note:
+- removed keys for `copy_files`: `items`, `overwrite` (action-level)
+
+Packaging note:
+- the manifest file must be included in packaged assets. Example manifests under `examples/` are already included by the build scripts.
+
 ### Plugin System
 
 Plugin discovery order:

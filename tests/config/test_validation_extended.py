@@ -87,6 +87,21 @@ def test_validate_semantics_write_dotfile_append_and_legacy(tmp_path):
         validate_config_semantics(cfg, registry=build_registry_with_builtins())
 
 
+def test_validate_semantics_copy_files_manifest_contract(tmp_path):
+    cfg = _cfg(tmp_path)
+    cfg.actions = [ActionConfig(type="copy_files", params={})]
+    with pytest.raises(ConfigValidationError, match="manifest_file"):
+        validate_config_semantics(cfg, registry=build_registry_with_builtins())
+
+    cfg.actions = [ActionConfig(type="copy_files", params={"manifest_file": "x.json", "items": []})]
+    with pytest.raises(ConfigValidationError, match="legacy keys"):
+        validate_config_semantics(cfg, registry=build_registry_with_builtins())
+
+    cfg.actions = [ActionConfig(type="copy_files", params={"manifest_file": "x.json", "overwrite": False})]
+    with pytest.raises(ConfigValidationError, match="legacy keys"):
+        validate_config_semantics(cfg, registry=build_registry_with_builtins())
+
+
 def test_validate_semantics_uninstall_policy_and_unix_links(tmp_path):
     cfg = _cfg(tmp_path)
     cfg.uninstall.modified_file_policy = "invalid"

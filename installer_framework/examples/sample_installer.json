@@ -207,13 +207,8 @@
     {
       "type": "copy_files",
       "rollback": "auto",
-      "items": [
-        {
-          "from": "assets/payload",
-          "to": "."
-        }
-      ],
-      "overwrite": true
+      "manifest_file": "assets/copy_manifest.json",
+      "preserve_permissions": true
     },
     {
       "type": "post_install_note",

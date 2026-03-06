@@ -127,45 +127,49 @@ class _ClassicSidebar(QWidget):
         self.pixmap = QPixmap(image_path) if image_path else QPixmap()
 
     def paintEvent(self, _event) -> None:
-        painter = QPainter(self)
-        rect = self.rect()
+        # Qt can dispatch late paint events while the widget is being torn down in tests.
+        try:
+            painter = QPainter(self)
+            rect = self.rect()
 
-        grad = QLinearGradient(float(rect.left()), float(rect.top()), float(rect.left()), float(rect.bottom()))
-        grad.setColorAt(0.0, QColor(self.theme.sidebar_top))
-        grad.setColorAt(1.0, QColor(self.theme.sidebar_bottom))
-        painter.fillRect(rect, grad)
+            grad = QLinearGradient(float(rect.left()), float(rect.top()), float(rect.left()), float(rect.bottom()))
+            grad.setColorAt(0.0, QColor(self.theme.sidebar_top))
+            grad.setColorAt(1.0, QColor(self.theme.sidebar_bottom))
+            painter.fillRect(rect, grad)
 
-        painter.setPen(QColor(self.theme.border_dark))
-        painter.drawRect(rect.adjusted(0, 0, -1, -1))
+            painter.setPen(QColor(self.theme.border_dark))
+            painter.drawRect(rect.adjusted(0, 0, -1, -1))
 
-        if not self.pixmap.isNull():
-            scaled = self.pixmap.scaled(
-                rect.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
+            if not self.pixmap.isNull():
+                scaled = self.pixmap.scaled(
+                    rect.size(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                x = rect.x() + (rect.width() - scaled.width()) // 2
+                y = rect.y() + (rect.height() - scaled.height()) // 2
+                painter.drawPixmap(x, y, scaled)
+                return
+
+            painter.setPen(Qt.GlobalColor.white)
+            title_font = QFont(self.theme.font_name or "", self.theme.title_size)
+            title_font.setBold(True)
+            painter.setFont(title_font)
+            painter.drawText(
+                rect.adjusted(10, rect.height() - 90, -10, -50),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+                self.title,
             )
-            x = rect.x() + (rect.width() - scaled.width()) // 2
-            y = rect.y() + (rect.height() - scaled.height()) // 2
-            painter.drawPixmap(x, y, scaled)
+
+            sub_font = QFont(self.theme.font_name or "", self.theme.base_size)
+            painter.setFont(sub_font)
+            painter.drawText(
+                rect.adjusted(10, rect.height() - 55, -10, -10),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+                self.subtitle,
+            )
+        except RuntimeError:
             return
-
-        painter.setPen(Qt.GlobalColor.white)
-        title_font = QFont(self.theme.font_name or "", self.theme.title_size)
-        title_font.setBold(True)
-        painter.setFont(title_font)
-        painter.drawText(
-            rect.adjusted(10, rect.height() - 90, -10, -50),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
-            self.title,
-        )
-
-        sub_font = QFont(self.theme.font_name or "", self.theme.base_size)
-        painter.setFont(sub_font)
-        painter.drawText(
-            rect.adjusted(10, rect.height() - 55, -10, -10),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
-            self.subtitle,
-        )
 
 
 class _ClassicCheckboxRow(QWidget):

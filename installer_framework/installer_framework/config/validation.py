@@ -91,6 +91,21 @@ def validate_config_semantics(config: InstallerConfig, registry: Any | None = No
                 f"Unsupported rollback policy '{action.rollback}' for action type '{action.type}'"
             )
 
+        if action.type == "copy_files":
+            params = action.params
+            manifest_file = params.get("manifest_file")
+            if not isinstance(manifest_file, str) or not manifest_file.strip():
+                raise ConfigValidationError("copy_files requires non-empty string 'manifest_file'")
+
+            used_legacy = sorted(k for k in ("items", "overwrite") if k in params)
+            if used_legacy:
+                raise ConfigValidationError(
+                    "copy_files no longer supports legacy keys: "
+                    + ", ".join(used_legacy)
+                    + ". Use 'manifest_file' with a versioned copy manifest."
+                )
+            continue
+
         if action.type != "write_dotfile":
             if action.type == "run_script" and action.rollback != "none":
                 if "undo_path" not in action.params:

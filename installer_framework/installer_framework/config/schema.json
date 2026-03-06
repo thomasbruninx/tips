@@ -140,6 +140,7 @@
         "properties": {
           "type": {"type": "string", "minLength": 1},
           "rollback": {"type": "string", "enum": ["auto", "delete_only", "none"]},
+          "manifest_file": {"type": "string", "minLength": 1},
           "target_path": {"type": "string", "minLength": 1},
           "append": {"type": "boolean"},
           "content": {},
@@ -147,6 +148,21 @@
           "uninstall_path": {"type": "string"}
         },
         "allOf": [
+          {
+            "if": {
+              "properties": {"type": {"const": "copy_files"}},
+              "required": ["type"]
+            },
+            "then": {
+              "required": ["manifest_file"],
+              "not": {
+                "anyOf": [
+                  {"required": ["items"]},
+                  {"required": ["overwrite"]}
+                ]
+              }
+            }
+          },
           {
             "if": {
               "properties": {"type": {"const": "write_dotfile"}},

@@ -30,7 +30,7 @@
       "button_height": 30
     },
     "typography": {
-      "font_name": "SF Pro Text",
+      "font_name": "Arial",
       "base_size": 13,
       "title_size": 17
     }
@@ -207,13 +207,8 @@
     {
       "type": "copy_files",
       "rollback": "auto",
-      "items": [
-        {
-          "from": "assets/payload",
-          "to": "."
-        }
-      ],
-      "overwrite": true
+      "manifest_file": "assets/copy_manifest.json",
+      "preserve_permissions": true
     },
     {
       "type": "post_install_note",
