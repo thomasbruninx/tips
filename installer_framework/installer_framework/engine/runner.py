@@ -7,13 +7,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 from installer_framework.config.models import ActionConfig
-from installer_framework.engine.actions.copy_files import CopyFilesAction
-from installer_framework.engine.actions.desktop_entry_linux import CreateDesktopEntryAction
-from installer_framework.engine.actions.dotfile import WriteDotfileAction
-from installer_framework.engine.actions.registry import ReadRegistryAction, WriteRegistryAction
-from installer_framework.engine.actions.run_script import RunScriptAction
-from installer_framework.engine.actions.shortcut_windows import CreateShortcutAction
-from installer_framework.engine.actions.show_message import ShowMessageAction
 from installer_framework.engine.context import InstallerContext
 from installer_framework.engine.manifest import manifest_path
 from installer_framework.engine.rollback import InstallCancelledError, InstallTransaction
@@ -45,18 +38,14 @@ class ActionRunner:
     def __init__(self, actions: list[ActionConfig]) -> None:
         self.actions = actions
 
-    def _create_action(self, cfg: ActionConfig):
-        mapping = {
-            "copy_files": CopyFilesAction,
-            "write_registry": WriteRegistryAction,
-            "read_registry": ReadRegistryAction,
-            "write_dotfile": WriteDotfileAction,
-            "create_shortcut": CreateShortcutAction,
-            "create_desktop_entry": CreateDesktopEntryAction,
-            "show_message": ShowMessageAction,
-            "run_script": RunScriptAction,
-        }
-        cls = mapping.get(cfg.type)
+    def _create_action(self, ctx: InstallerContext, cfg: ActionConfig):
+        registry = ctx.plugin_registry or getattr(ctx.config, "plugin_registry", None)
+        if registry is None:
+            from installer_framework.plugins.registry import build_registry_with_builtins
+
+            registry = build_registry_with_builtins()
+            ctx.plugin_registry = registry
+        cls = registry.get_action_class(cfg.type) if registry is not None else None
         if not cls:
             raise ActionRunnerError(f"Unsupported action type: {cfg.type}")
         return cls(cfg.params)
@@ -157,7 +146,7 @@ class ActionRunner:
                 if ctx.is_cancelled():
                     raise InstallCancelledError("Installation cancelled by user.")
 
-                action = self._create_action(cfg)
+                action = self._create_action(ctx, cfg)
                 current_task += 1
                 action_start = int(((current_task - 1) / total) * 100)
                 action_end = int((current_task / total) * 100)

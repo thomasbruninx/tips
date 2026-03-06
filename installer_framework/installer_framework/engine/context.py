@@ -32,10 +32,13 @@ class InstallerContext:
     env: EnvironmentInfo = field(default_factory=get_environment_info)
     is_elevated: bool = field(default_factory=has_elevated_privileges)
     cancel_event: Event = field(default_factory=Event)
+    plugin_registry: Any | None = None
     transaction: Any | None = None
     action_rollback_policy: str = "auto"
 
     def __post_init__(self) -> None:
+        if self.plugin_registry is None:
+            self.plugin_registry = getattr(self.config, "plugin_registry", None)
         if not self.state.environment:
             self.state.environment = {
                 "os": self.env.os_name,

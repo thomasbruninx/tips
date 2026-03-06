@@ -54,7 +54,7 @@ def _validate_theme(config: InstallerConfig) -> None:
 
 
 
-def validate_config_semantics(config: InstallerConfig) -> None:
+def validate_config_semantics(config: InstallerConfig, registry: Any | None = None) -> None:
     step_ids = {step.id for step in config.steps}
     if len(step_ids) != len(config.steps):
         raise ConfigValidationError("Step ids must be unique")
@@ -68,6 +68,8 @@ def validate_config_semantics(config: InstallerConfig) -> None:
         raise ConfigValidationError("install_scope='ask' requires a scope step")
 
     for step in config.steps:
+        if registry is not None and step.type not in registry.step_handles():
+            raise ConfigValidationError(f"Unknown step type '{step.type}'. Check plugin discovery or step handle.")
         field_ids = {field.id for field in step.fields}
         if len(field_ids) != len(step.fields):
             raise ConfigValidationError(f"Duplicate field ids in step '{step.id}'")
@@ -80,6 +82,10 @@ def validate_config_semantics(config: InstallerConfig) -> None:
         raise ConfigValidationError("At least one install action is required")
 
     for action in config.actions:
+        if registry is not None and action.type not in registry.action_handles():
+            raise ConfigValidationError(
+                f"Unknown action type '{action.type}'. Check plugin discovery or action handle."
+            )
         if action.rollback not in {"auto", "delete_only", "none"}:
             raise ConfigValidationError(
                 f"Unsupported rollback policy '{action.rollback}' for action type '{action.type}'"

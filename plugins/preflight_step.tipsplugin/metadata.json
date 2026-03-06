@@ -1,0 +1,9 @@
+{
+  "type": "step",
+  "handle": "preflight_step",
+  "version": "1.0.0",
+  "min_framework_version": "0.1.0",
+  "max_framework_version": "0.1.99",
+  "name": "Preflight Checklist Step",
+  "description": "Adds a pre-install checklist acknowledgement step"
+}

@@ -74,20 +74,7 @@
         "required": ["id", "type", "title"],
         "properties": {
           "id": {"type": "string", "minLength": 1},
-          "type": {
-            "type": "string",
-            "enum": [
-              "welcome",
-              "license",
-              "scope",
-              "directory",
-              "options",
-              "form",
-              "ready",
-              "install",
-              "finish"
-            ]
-          },
+          "type": {"type": "string", "minLength": 1},
           "title": {"type": "string"},
           "description": {"type": "string"},
           "header_description": {"type": "string"},
@@ -151,19 +138,7 @@
         "type": "object",
         "required": ["type"],
         "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "copy_files",
-              "write_registry",
-              "read_registry",
-              "write_dotfile",
-              "create_shortcut",
-              "create_desktop_entry",
-              "show_message",
-              "run_script"
-            ]
-          },
+          "type": {"type": "string", "minLength": 1},
           "rollback": {"type": "string", "enum": ["auto", "delete_only", "none"]},
           "target_path": {"type": "string", "minLength": 1},
           "append": {"type": "boolean"},

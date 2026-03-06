@@ -22,6 +22,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Load resume state from temp dir if available",
     )
+    parser.add_argument(
+        "--plugins-dir",
+        default=None,
+        help="Optional plugin root directory containing *.tipsplugin subfolders",
+    )
     return parser.parse_args()
 
 
@@ -46,7 +51,7 @@ def main() -> None:
     configure_logging()
     args = parse_args()
     config_path = resolve_config_path(args.config)
-    config = load_config(config_path)
+    config = load_config(config_path, plugins_dir=args.plugins_dir)
     from installer_framework.app.qt_app import InstallerQtApp
 
     app = InstallerQtApp(config=config, resume=args.resume)

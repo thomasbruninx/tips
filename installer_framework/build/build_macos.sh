@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+resolve_python() {
+  if [[ -n "${PYTHON:-}" ]]; then
+    echo "$PYTHON"
+    return
+  fi
+  if [[ -x "$PROJECT_ROOT/.venv/bin/python" ]]; then
+    echo "$PROJECT_ROOT/.venv/bin/python"
+    return
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    command -v python3
+    return
+  fi
+  if command -v python >/dev/null 2>&1; then
+    command -v python
+    return
+  fi
+  echo "No Python interpreter found. Set PYTHON or create .venv/bin/python." >&2
+  exit 1
+}
+
+PYTHON_BIN="$(resolve_python)"
+CONFIG_ARG="${1:-examples/sample_installer.json}"
+REPO_ROOT="$(cd "$PROJECT_ROOT/.." && pwd)"
+PLUGINS_DIR="$REPO_ROOT/plugins"
+CONFIG_PATH="$($PYTHON_BIN - "$PROJECT_ROOT" "$CONFIG_ARG" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+arg = Path(sys.argv[2]).expanduser()
+if not arg.is_absolute():
+    arg = root / arg
+print(arg.resolve())
+PY
+)"
+
+resolve_icon_from_config() {
+  "$PYTHON_BIN" - "$CONFIG_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+if not config_path.exists():
+    sys.exit(0)
+
+try:
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    print(f"Warning: failed to parse config for icon lookup: {exc}", file=sys.stderr)
+    sys.exit(0)
+
+candidates = [
+    (data.get("macos") or {}).get("installer_icon_icns"),
+    (data.get("branding") or {}).get("windowIconPath"),
+]
+
+for candidate in candidates:
+    if not candidate:
+        continue
+    icon_path = Path(candidate).expanduser()
+    if not icon_path.is_absolute():
+        icon_path = (config_path.parent / icon_path).resolve()
+    if icon_path.suffix.lower() != ".icns":
+        continue
+    if icon_path.exists():
+        print(icon_path)
+        sys.exit(0)
+    print(f"Warning: configured macOS icon not found: {icon_path}", file=sys.stderr)
+
+sys.exit(0)
+PY
+}
+
+ICON_PATH="$(resolve_icon_from_config)"
+OUT_DIR="$PROJECT_ROOT/dist/macos"
+mkdir -p "$OUT_DIR"
+
+PYINSTALLER_ARGS=(
+  --noconfirm
+  --clean
+  --windowed
+  --name tips-installer
+  --hidden-import PyQt6.QtCore
+  --hidden-import PyQt6.QtGui
+  --hidden-import PyQt6.QtWidgets
+  --hidden-import PyQt6.sip
+  --add-data "examples:examples"
+  --add-data "installer_framework/config/schema.json:installer_framework/config"
+)
+
+if [[ -n "$ICON_PATH" ]]; then
+  PYINSTALLER_ARGS+=(--icon "$ICON_PATH")
+  echo "Using macOS app icon: $ICON_PATH"
+fi
+
+if [[ -d "$PLUGINS_DIR" ]]; then
+  echo "Checking plugins in: $PLUGINS_DIR"
+  "$PYTHON_BIN" - "$PROJECT_ROOT" "$PLUGINS_DIR" <<'PY'
+from pathlib import Path
+import sys
+
+project_root = Path(sys.argv[1]).resolve()
+plugins_dir = Path(sys.argv[2]).resolve()
+sys.path.insert(0, str(project_root))
+
+from installer_framework import __version__
+from installer_framework.plugins.discovery import discover_and_register_plugins
+from installer_framework.plugins.registry import build_registry_with_builtins
+
+registry = build_registry_with_builtins()
+result = discover_and_register_plugins(registry=registry, roots=[plugins_dir], framework_version=__version__)
+if not result.statuses:
+    print("No plugins discovered.")
+for status in result.statuses:
+    suffix = f" ({status.reason})" if status.reason else ""
+    print(f"{status.status.upper()}: {status.plugin_type}:{status.handle} @ {status.plugin_dir}{suffix}")
+PY
+  PYINSTALLER_ARGS+=(--add-data "$PLUGINS_DIR:plugins")
+fi
+
+"$PYTHON_BIN" -m PyInstaller "${PYINSTALLER_ARGS[@]}" installer_framework/main.py
+
+rm -rf "$OUT_DIR/tips-installer.app"
+cp -R "dist/tips-installer.app" "$OUT_DIR/tips-installer.app"
+echo "Build complete: $OUT_DIR"

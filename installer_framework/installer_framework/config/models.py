@@ -86,6 +86,7 @@ class StepConfig:
     show_if: str | None = None
     navigation: dict[str, Any] = field(default_factory=dict)
     license_path: str | None = None
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -147,6 +148,9 @@ class InstallerConfig:
     uninstall: UninstallSettings = field(default_factory=UninstallSettings)
     hooks: dict[str, Any] = field(default_factory=dict)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
+    plugin_registry: Any | None = None
+    plugin_statuses: list[dict[str, Any]] = field(default_factory=list)
+    plugin_roots: list[str] = field(default_factory=list)
     source_root: Path = field(default_factory=lambda: Path.cwd())
 
 
@@ -171,17 +175,29 @@ def _field_from_dict(data: dict[str, Any]) -> FieldConfig:
 
 
 def _step_from_dict(data: dict[str, Any]) -> StepConfig:
+    payload = dict(data)
+    step_id = payload.pop("id")
+    step_type = payload.pop("type")
+    title = payload.pop("title", step_id)
+    description = payload.pop("description", "")
+    header_description = payload.pop("header_description", None)
+    body_description = payload.pop("body_description", None)
+    fields = [_field_from_dict(f) for f in payload.pop("fields", [])]
+    show_if = payload.pop("show_if", None)
+    navigation = dict(payload.pop("navigation", {}))
+    license_path = payload.pop("license_path", None)
     return StepConfig(
-        id=data["id"],
-        type=data["type"],
-        title=data.get("title", data["id"]),
-        description=data.get("description", ""),
-        header_description=data.get("header_description"),
-        body_description=data.get("body_description"),
-        fields=[_field_from_dict(f) for f in data.get("fields", [])],
-        show_if=data.get("show_if"),
-        navigation=dict(data.get("navigation", {})),
-        license_path=data.get("license_path"),
+        id=step_id,
+        type=step_type,
+        title=title,
+        description=description,
+        header_description=header_description,
+        body_description=body_description,
+        fields=fields,
+        show_if=show_if,
+        navigation=navigation,
+        license_path=license_path,
+        params=payload,
     )
 
 

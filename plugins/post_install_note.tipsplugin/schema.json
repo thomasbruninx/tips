@@ -1,0 +1,21 @@
+{
+  "kind": "action",
+  "handle": "post_install_note",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "note_file": {"type": "string", "minLength": 1},
+      "lines": {
+        "oneOf": [
+          {"type": "string", "minLength": 1},
+          {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "minItems": 1
+          }
+        ]
+      }
+    },
+    "required": ["note_file", "lines"]
+  }
+}

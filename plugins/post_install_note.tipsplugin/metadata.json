@@ -1,0 +1,9 @@
+{
+  "type": "action",
+  "handle": "post_install_note",
+  "version": "1.0.0",
+  "min_framework_version": "0.1.0",
+  "max_framework_version": "0.1.99",
+  "name": "Post Install Note",
+  "description": "Writes a formatted post-install note file"
+}

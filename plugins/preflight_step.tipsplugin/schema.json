@@ -1,0 +1,18 @@
+{
+  "kind": "step",
+  "handle": "preflight_step",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "checklist": {
+        "type": "array",
+        "items": {"type": "string", "minLength": 1},
+        "minItems": 1
+      },
+      "ack_label": {"type": "string"},
+      "required_ack": {"type": "boolean"},
+      "answer_key": {"type": "string", "minLength": 1}
+    },
+    "required": ["checklist"]
+  }
+}

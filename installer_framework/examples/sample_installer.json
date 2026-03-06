@@ -89,6 +89,19 @@
       "body_description": "This setup will guide you through the installation. Click Next to continue."
     },
     {
+      "id": "preflight",
+      "type": "preflight_step",
+      "title": "Pre-install Checklist",
+      "description": "Confirm the following checks before continuing.",
+      "checklist": [
+        "Close running instances of TIPS Demo App",
+        "Ensure enough disk space in the target install directory",
+        "Confirm you have permissions for the selected install scope"
+      ],
+      "ack_label": "I confirm these pre-install checks are complete.",
+      "required_ack": true
+    },
+    {
       "id": "license",
       "type": "license",
       "title": "License Agreement",
@@ -201,6 +214,17 @@
         }
       ],
       "overwrite": true
+    },
+    {
+      "type": "post_install_note",
+      "rollback": "auto",
+      "note_file": "notes/post_install_note.txt",
+      "lines": [
+        "Product: {product_name}",
+        "Version: {version}",
+        "Scope: {scope}",
+        "InstallDir: {install_dir}"
+      ]
     },
     {
       "type": "create_shortcut",

@@ -19,6 +19,10 @@ This project provides a JSON-driven, **PyQt6**-based installer framework for Win
   - optional conditions (`show_if`)
   - field definitions and validations
   - install actions
+- External plugin extensions:
+  - plugin root discovery (`--plugins-dir`, `TIPS_PLUGINS_DIR`, repo-root `plugins/`, bundled `plugins/`)
+  - custom step/action handlers from `*.tipsplugin`
+  - plugin schema fragments merged into runtime config validation
 - Theme block (`theme.style = "classic"` or `"modern"`) with colors, metrics, typography, and artwork paths
 - Install scopes:
   - `user`
@@ -71,6 +75,11 @@ installer_framework/
       models.py
       validation.py
       conditions.py
+    plugins/
+      models.py
+      discovery.py
+      registry.py
+      schema_compose.py
     ui/
       theme.py
       wizard.py
@@ -130,6 +139,11 @@ installer_framework/
     build_windows.ps1
     build_linux.sh
     build_macos.sh
+../plugins/
+  <name>.tipsplugin/
+    metadata.json
+    schema.json
+    plugin.py
 ```
 
 ## Run From Source
@@ -146,6 +160,12 @@ Optional resume mode:
 
 ```bash
 python -m installer_framework.main --config examples/sample_installer.json --resume
+```
+
+Optional plugin root override:
+
+```bash
+python -m installer_framework.main --config examples/sample_installer.json --plugins-dir /absolute/path/to/plugins
 ```
 
 Resume state file: temp path `tips_installer_resume.json`.
@@ -239,7 +259,7 @@ Values:
 
 ### Step Types
 
-Implemented step types:
+Built-in step types:
 - `welcome`
 - `license`
 - `scope`
@@ -249,6 +269,8 @@ Implemented step types:
 - `ready`
 - `install`
 - `finish`
+
+Additional custom step types can be provided by plugins.
 
 Step text fields:
 - `description`: legacy shared description used by header and body when no overrides are set.
@@ -276,6 +298,41 @@ Available symbols:
 - `answers`
 - `selected_features`
 - `scope` / `install_scope`
+
+### Plugin System
+
+Plugin discovery order:
+1. `--plugins-dir` CLI option
+2. `TIPS_PLUGINS_DIR` environment variable
+3. repo-root `plugins/`
+4. bundled `plugins/` (for packaged artifacts)
+
+Each plugin lives in `<root>/<name>.tipsplugin/` and must contain:
+- `metadata.json`
+- `schema.json`
+- `plugin.py`
+
+`metadata.json` required keys:
+- `type`: `action` or `step`
+- `handle`
+- `version`
+- `min_framework_version`
+- `max_framework_version`
+
+`plugin.py` must expose `register()`:
+- action plugin: `{\"action_class\": <Action subclass>}`
+- step plugin: `{\"step_class\": <StepWidget subclass>}`
+
+`schema.json` contract:
+- `kind`: `action` or `step`
+- `handle`: plugin handle
+- `schema`: JSON schema fragment for that action/step object
+
+Behavior:
+- incompatible plugin versions are skipped with warnings
+- duplicate handles fail fast
+- missing required plugin files fail fast
+- if config references an unknown/absent plugin handle, config load fails
 
 ### `write_dotfile` (v2)
 
@@ -414,19 +471,21 @@ Optional sudo relaunch:
 
 ## Extend the Framework
 
-### Add a New Step Type
+Use plugins instead of editing core mappings.
 
-1. Add a new step widget in `installer_framework/ui/steps/` inheriting `StepWidget`.
-2. Implement `apply_state`, `get_data`, `validate`, and optionally `on_show`.
-3. Register in `installer_framework/ui/step_factory.py`.
-4. Add new step type to schema enum in `installer_framework/config/schema.json`.
+### Add a New Step Plugin
 
-### Add a New Action Type
+1. Create `<repo-root>/plugins/<name>.tipsplugin/`.
+2. Add `metadata.json` with `type: \"step\"` and unique `handle`.
+3. Add `plugin.py` with a `StepWidget` subclass and `register() -> {\"step_class\": ...}`.
+4. Add `schema.json` with `kind: \"step\"` and a schema fragment for step config validation.
 
-1. Add action class in `installer_framework/engine/actions/` inheriting `Action`.
-2. Implement `execute(ctx, progress_callback, log_callback)`.
-3. Register type mapping in `installer_framework/engine/runner.py`.
-4. Add the type to schema enum in `installer_framework/config/schema.json`.
+### Add a New Action Plugin
+
+1. Create `<repo-root>/plugins/<name>.tipsplugin/`.
+2. Add `metadata.json` with `type: \"action\"` and unique `handle`.
+3. Add `plugin.py` with an `Action` subclass and `register() -> {\"action_class\": ...}`.
+4. Add `schema.json` with `kind: \"action\"` and a schema fragment for action params validation.
 
 ## Build Distributables
 
@@ -442,6 +501,8 @@ Outputs:
 - `dist/windows/tips-installer.exe`
 - `dist/windows/tips-uninstaller.exe`
 
+If repo-root `plugins/` exists, compatible plugins are analyzed during build and bundled into the artifact.
+
 ### Linux
 
 ```bash
@@ -450,6 +511,8 @@ Outputs:
 
 Output: `dist/linux/tips-installer/` (onefolder)
 
+If repo-root `plugins/` exists, compatible plugins are analyzed during build and bundled into the artifact.
+
 ### macOS
 
 ```bash
@@ -457,6 +520,8 @@ Output: `dist/linux/tips-installer/` (onefolder)
 ```
 
 Output: `dist/macos/tips-installer.app`
+
+If repo-root `plugins/` exists, compatible plugins are analyzed during build and bundled into the artifact.
 
 ## PyQt6 + PyInstaller Troubleshooting
 
