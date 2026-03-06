@@ -296,7 +296,6 @@ class Wizard(QMainWindow):
             if not confirm:
                 return
             self.ctx.cancel()
-            show_message_dialog("warn", "Installer closed", reason)
             self.close()
             QApplication.instance().quit()
 

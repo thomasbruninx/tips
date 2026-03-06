@@ -173,7 +173,7 @@ class _ClassicCheckboxRow(QWidget):
         super().__init__(**kwargs)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
+        layout.setSpacing(10)
 
         self.checkbox = QCheckBox()
         self.checkbox.setChecked(active)
@@ -182,7 +182,7 @@ class _ClassicCheckboxRow(QWidget):
         self.button = QPushButton(text)
         self.button.setFlat(True)
         self.button.setStyleSheet(
-            f"QPushButton {{ border: none; text-align: left; color: {theme.text_primary}; background: transparent; }}"
+            f"QPushButton {{ border: none; text-align: left; color: {theme.text_primary}; background: transparent; padding-left: 2px; }}"
         )
         _set_font(self.button, theme, theme.base_size)
         self.button.clicked.connect(lambda: self.checkbox.setChecked(not self.checkbox.isChecked()))
