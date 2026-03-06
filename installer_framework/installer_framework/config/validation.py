@@ -49,8 +49,48 @@ def _validate_theme(config: InstallerConfig) -> None:
             raise ConfigValidationError(f"Theme metric '{name}' must be > 0")
 
     typography = theme.typography
-    if typography.base_size <= 0 or typography.title_size <= 0:
-        raise ConfigValidationError("Theme typography sizes must be > 0")
+    if typography.legacy_keys:
+        raise ConfigValidationError(
+            "Legacy typography keys are no longer supported: "
+            + ", ".join(sorted(typography.legacy_keys))
+            + ". Use typography.fonts + typography.presets."
+        )
+
+    if not typography.fonts:
+        raise ConfigValidationError("theme.typography.fonts must contain at least one font catalog entry")
+    for idx, font in enumerate(typography.fonts):
+        if not font.font_family.strip():
+            raise ConfigValidationError(f"theme.typography.fonts[{idx}].font_family must be non-empty")
+        if font.font_ttf_path is not None and not isinstance(font.font_ttf_path, str):
+            raise ConfigValidationError(f"theme.typography.fonts[{idx}].font_ttf_path must be a string when provided")
+        if isinstance(font.font_ttf_path, str) and not font.font_ttf_path.strip():
+            raise ConfigValidationError(f"theme.typography.fonts[{idx}].font_ttf_path must be non-empty when provided")
+
+    if not typography.presets:
+        raise ConfigValidationError("theme.typography.presets must contain at least one preset")
+
+    for preset_name, preset in typography.presets.items():
+        if not preset_name.strip():
+            raise ConfigValidationError("theme.typography.preset keys must be non-empty")
+        for role_name, entries in (("title", preset.title), ("text", preset.text)):
+            if not entries:
+                raise ConfigValidationError(
+                    f"theme.typography.presets['{preset_name}'].{role_name} must contain at least one entry"
+                )
+            for idx, entry in enumerate(entries):
+                if not entry.font_family.strip():
+                    raise ConfigValidationError(
+                        f"theme.typography.presets['{preset_name}'].{role_name}[{idx}].font_family must be non-empty"
+                    )
+                if entry.font_size <= 0:
+                    raise ConfigValidationError(
+                        f"theme.typography.presets['{preset_name}'].{role_name}[{idx}].font_size must be > 0"
+                    )
+
+    if typography.default_preset is not None and typography.default_preset not in typography.presets:
+        raise ConfigValidationError(
+            f"theme.typography.default_preset '{typography.default_preset}' does not exist in presets"
+        )
 
 
 
@@ -70,6 +110,13 @@ def validate_config_semantics(config: InstallerConfig, registry: Any | None = No
     for step in config.steps:
         if registry is not None and step.type not in registry.step_handles():
             raise ConfigValidationError(f"Unknown step type '{step.type}'. Check plugin discovery or step handle.")
+        if step.typography_preset is not None:
+            if not step.typography_preset.strip():
+                raise ConfigValidationError(f"Step '{step.id}' typography_preset must be a non-empty string")
+            if step.typography_preset not in config.theme.typography.presets:
+                raise ConfigValidationError(
+                    f"Step '{step.id}' references unknown typography_preset '{step.typography_preset}'"
+                )
         field_ids = {field.id for field in step.fields}
         if len(field_ids) != len(step.fields):
             raise ConfigValidationError(f"Duplicate field ids in step '{step.id}'")

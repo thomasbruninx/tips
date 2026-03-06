@@ -93,3 +93,21 @@ def test_resolve_plugin_roots_includes_cli_and_env(monkeypatch, tmp_path):
     roots = resolve_plugin_roots(source_root=source_root, plugins_dir=str(cli_root))
     assert cli_root in roots
     assert env_root in roots
+
+
+def test_resolve_plugin_roots_skips_repo_root_when_frozen(monkeypatch, tmp_path):
+    source_root = tmp_path / "src"
+    source_root.mkdir(parents=True)
+    repo_plugins = tmp_path / "repo_plugins"
+    repo_plugins.mkdir()
+    bundled_plugins = tmp_path / "bundled_plugins"
+    bundled_plugins.mkdir()
+
+    monkeypatch.setattr("installer_framework.plugins.discovery._find_repo_root", lambda _src: tmp_path)
+    monkeypatch.setattr("installer_framework.plugins.discovery.resource_path", lambda _p: bundled_plugins)
+    monkeypatch.setattr("installer_framework.plugins.discovery.sys.frozen", True, raising=False)
+    monkeypatch.setattr("installer_framework.plugins.discovery.sys._MEIPASS", str(tmp_path / "bundle"), raising=False)
+
+    roots = resolve_plugin_roots(source_root=source_root, plugins_dir=None)
+    assert (tmp_path / "plugins") not in roots
+    assert bundled_plugins in roots

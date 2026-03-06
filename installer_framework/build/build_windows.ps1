@@ -65,6 +65,84 @@ function Get-WindowsIconPath([string]$ResolvedConfigPath) {
   return $null
 }
 
+function Get-TypographyFontDataEntries([string]$ResolvedConfigPath) {
+  if (-not $ResolvedConfigPath -or -not (Test-Path $ResolvedConfigPath)) {
+    return @()
+  }
+
+  $DiscoveryScript = @'
+import json
+import sys
+from pathlib import Path
+
+project_root = Path(sys.argv[1]).resolve()
+config_path = Path(sys.argv[2]).resolve()
+config_dir = config_path.parent
+
+try:
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    print(f"Warning: failed to parse config for typography font discovery: {exc}", file=sys.stderr)
+    print("[]")
+    raise SystemExit(0)
+
+fonts = (((payload.get("theme") or {}).get("typography") or {}).get("fonts") or [])
+
+try:
+    config_dir_rel = config_dir.relative_to(project_root)
+except ValueError:
+    config_dir_rel = Path("config_assets")
+
+entries: list[dict[str, str]] = []
+seen: set[tuple[str, str]] = set()
+
+for item in fonts:
+    if not isinstance(item, dict):
+        continue
+    raw_path = item.get("font_ttf_path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        continue
+
+    candidate = Path(raw_path).expanduser()
+    if candidate.is_absolute():
+        source = candidate.resolve()
+        dest_dir = Path("fonts")
+    else:
+        source = (config_dir / candidate).resolve()
+        parent = candidate.parent if str(candidate.parent) != "." else Path("")
+        dest_dir = (config_dir_rel / parent).as_posix()
+        dest_dir = Path(dest_dir)
+
+    if not source.exists():
+        print(f"Warning: configured font_ttf_path not found: {source}", file=sys.stderr)
+        continue
+
+    key = (str(source), dest_dir.as_posix())
+    if key in seen:
+        continue
+    seen.add(key)
+    entries.append({"src": str(source), "dest": dest_dir.as_posix()})
+
+print(json.dumps(entries))
+'@
+
+  if ($UsePyLauncher) {
+    $json = & $PythonExe -3 -c $DiscoveryScript $ProjectRoot $ResolvedConfigPath
+  } else {
+    $json = & $PythonExe -c $DiscoveryScript $ProjectRoot $ResolvedConfigPath
+  }
+
+  if ([string]::IsNullOrWhiteSpace($json)) {
+    return @()
+  }
+  try {
+    return $json | ConvertFrom-Json
+  } catch {
+    Write-Warning "Failed to parse typography font discovery output: $($_.Exception.Message)"
+    return @()
+  }
+}
+
 $PythonExe = $null
 $UsePyLauncher = $false
 
@@ -83,6 +161,7 @@ if ($env:PYTHON) {
 
 $ResolvedConfigPath = Resolve-ConfigPath $ConfigPath
 $IconPath = Get-WindowsIconPath $ResolvedConfigPath
+$TypographyFontEntries = Get-TypographyFontDataEntries $ResolvedConfigPath
 $RepoRoot = Resolve-Path (Join-Path $ProjectRoot "..")
 $PluginsRoot = Join-Path $RepoRoot "plugins"
 
@@ -118,6 +197,16 @@ $CommonArgs = @(
 if ($IconPath) {
   Write-Host "Using Windows installer icon: $IconPath"
   $CommonArgs += @("--icon", $IconPath)
+}
+
+if ($TypographyFontEntries.Count -gt 0) {
+  foreach ($entry in $TypographyFontEntries) {
+    if (-not $entry.src -or -not $entry.dest) {
+      continue
+    }
+    Write-Host "Bundling typography font: $($entry.src) -> $($entry.dest)"
+    $CommonArgs += @("--add-data", "$($entry.src);$($entry.dest)")
+  }
 }
 
 if (Test-Path $PluginsRoot) {

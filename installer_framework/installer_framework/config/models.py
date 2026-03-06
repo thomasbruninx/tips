@@ -42,10 +42,54 @@ class ThemeMetricsConfig:
 
 
 @dataclass(slots=True)
+class ThemeFontCatalogEntry:
+    font_family: str
+    font_ttf_path: str | None = None
+
+
+@dataclass(slots=True)
+class ThemeTypographyRoleEntry:
+    font_family: str
+    font_size: int
+
+
+@dataclass(slots=True)
+class ThemeTypographyPreset:
+    title: list[ThemeTypographyRoleEntry] = field(default_factory=list)
+    text: list[ThemeTypographyRoleEntry] = field(default_factory=list)
+
+
+def _default_classic_font_catalog() -> list[ThemeFontCatalogEntry]:
+    return [
+        ThemeFontCatalogEntry(font_family="Tahoma"),
+        ThemeFontCatalogEntry(font_family="Segoe UI"),
+        ThemeFontCatalogEntry(font_family="Arial"),
+    ]
+
+
+def _default_classic_typography_presets() -> dict[str, ThemeTypographyPreset]:
+    return {
+        "default": ThemeTypographyPreset(
+            title=[
+                ThemeTypographyRoleEntry(font_family="Tahoma", font_size=18),
+                ThemeTypographyRoleEntry(font_family="Segoe UI", font_size=18),
+                ThemeTypographyRoleEntry(font_family="Arial", font_size=18),
+            ],
+            text=[
+                ThemeTypographyRoleEntry(font_family="Tahoma", font_size=14),
+                ThemeTypographyRoleEntry(font_family="Segoe UI", font_size=14),
+                ThemeTypographyRoleEntry(font_family="Arial", font_size=14),
+            ],
+        )
+    }
+
+
+@dataclass(slots=True)
 class ThemeTypographyConfig:
-    font_name: str = "Tahoma"
-    base_size: int = 14
-    title_size: int = 18
+    fonts: list[ThemeFontCatalogEntry] = field(default_factory=_default_classic_font_catalog)
+    default_preset: str | None = "default"
+    presets: dict[str, ThemeTypographyPreset] = field(default_factory=_default_classic_typography_presets)
+    legacy_keys: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -86,6 +130,7 @@ class StepConfig:
     show_if: str | None = None
     navigation: dict[str, Any] = field(default_factory=dict)
     license_path: str | None = None
+    typography_preset: str | None = None
     params: dict[str, Any] = field(default_factory=dict)
 
 
@@ -186,6 +231,7 @@ def _step_from_dict(data: dict[str, Any]) -> StepConfig:
     show_if = payload.pop("show_if", None)
     navigation = dict(payload.pop("navigation", {}))
     license_path = payload.pop("license_path", None)
+    typography_preset = payload.pop("typography_preset", None)
     return StepConfig(
         id=step_id,
         type=step_type,
@@ -197,6 +243,7 @@ def _step_from_dict(data: dict[str, Any]) -> StepConfig:
         show_if=show_if,
         navigation=navigation,
         license_path=license_path,
+        typography_preset=typography_preset,
         params=payload,
     )
 
@@ -223,6 +270,40 @@ def _action_from_dict(data: dict[str, Any]) -> ActionConfig:
 def _theme_from_dict(data: dict[str, Any]) -> ThemeConfig:
     style = data.get("style", "classic")
     default_assets = ThemeAssetsConfig()
+
+    def _default_typography(theme_style: str) -> ThemeTypographyConfig:
+        if theme_style == "modern":
+            return ThemeTypographyConfig(
+                fonts=[
+                    ThemeFontCatalogEntry(font_family="SF Pro Text"),
+                    ThemeFontCatalogEntry(font_family="SF Pro Display"),
+                    ThemeFontCatalogEntry(font_family="Segoe UI"),
+                    ThemeFontCatalogEntry(font_family="Segoe UI Semibold"),
+                    ThemeFontCatalogEntry(font_family="Arial"),
+                ],
+                default_preset="default",
+                presets={
+                    "default": ThemeTypographyPreset(
+                        title=[
+                            ThemeTypographyRoleEntry(font_family="SF Pro Display", font_size=17),
+                            ThemeTypographyRoleEntry(font_family="Segoe UI Semibold", font_size=17),
+                            ThemeTypographyRoleEntry(font_family="Arial", font_size=17),
+                        ],
+                        text=[
+                            ThemeTypographyRoleEntry(font_family="SF Pro Text", font_size=13),
+                            ThemeTypographyRoleEntry(font_family="Segoe UI", font_size=13),
+                            ThemeTypographyRoleEntry(font_family="Arial", font_size=13),
+                        ],
+                    )
+                },
+            )
+
+        return ThemeTypographyConfig(
+            fonts=_default_classic_font_catalog(),
+            default_preset="default",
+            presets=_default_classic_typography_presets(),
+        )
+
     if style == "modern":
         default_colors = ThemeColorsConfig(
             window_bg="#F5F5F7",
@@ -239,15 +320,11 @@ def _theme_from_dict(data: dict[str, Any]) -> ThemeConfig:
             padding=14,
             button_height=30,
         )
-        default_typography = ThemeTypographyConfig(
-            font_name="SF Pro Text",
-            base_size=13,
-            title_size=17,
-        )
+        default_typography = _default_typography("modern")
     else:
         default_colors = ThemeColorsConfig()
         default_metrics = ThemeMetricsConfig()
-        default_typography = ThemeTypographyConfig()
+        default_typography = _default_typography("classic")
 
     assets_data = data.get("assets", {})
     colors_data = data.get("colors", {})
@@ -273,10 +350,56 @@ def _theme_from_dict(data: dict[str, Any]) -> ThemeConfig:
         padding=metrics_data.get("padding", default_metrics.padding),
         button_height=metrics_data.get("button_height", default_metrics.button_height),
     )
+    legacy_keys = [key for key in ("font_name", "base_size", "title_size") if key in typography_data]
+    fonts_data = typography_data.get("fonts")
+    presets_data = typography_data.get("presets")
+    default_preset = typography_data.get("default_preset", default_typography.default_preset)
+
+    fonts: list[ThemeFontCatalogEntry]
+    if fonts_data is None:
+        fonts = list(default_typography.fonts)
+    else:
+        fonts = [
+            ThemeFontCatalogEntry(
+                font_family=str(item.get("font_family", "")),
+                font_ttf_path=item.get("font_ttf_path"),
+            )
+            for item in fonts_data
+            if isinstance(item, dict)
+        ]
+
+    presets: dict[str, ThemeTypographyPreset]
+    if presets_data is None:
+        presets = dict(default_typography.presets)
+    else:
+        parsed_presets: dict[str, ThemeTypographyPreset] = {}
+        for preset_name, preset_value in presets_data.items():
+            if not isinstance(preset_value, dict):
+                continue
+            title_entries = [
+                ThemeTypographyRoleEntry(
+                    font_family=str(entry.get("font_family", "")),
+                    font_size=int(entry.get("font_size", 0)),
+                )
+                for entry in preset_value.get("title", [])
+                if isinstance(entry, dict)
+            ]
+            text_entries = [
+                ThemeTypographyRoleEntry(
+                    font_family=str(entry.get("font_family", "")),
+                    font_size=int(entry.get("font_size", 0)),
+                )
+                for entry in preset_value.get("text", [])
+                if isinstance(entry, dict)
+            ]
+            parsed_presets[str(preset_name)] = ThemeTypographyPreset(title=title_entries, text=text_entries)
+        presets = parsed_presets
+
     typography = ThemeTypographyConfig(
-        font_name=typography_data.get("font_name", default_typography.font_name),
-        base_size=typography_data.get("base_size", default_typography.base_size),
-        title_size=typography_data.get("title_size", default_typography.title_size),
+        fonts=fonts,
+        default_preset=default_preset,
+        presets=presets,
+        legacy_keys=legacy_keys,
     )
     return ThemeConfig(
         style=style,

@@ -64,7 +64,14 @@ class ThemeWidgetFactory(ABC):
         """Create a themed push button."""
 
     @abstractmethod
-    def create_header(self, title: str, description: str, image_path: str | None = None, **kwargs) -> QWidget:
+    def create_header(
+        self,
+        title: str,
+        description: str,
+        image_path: str | None = None,
+        typography_preset: str | None = None,
+        **kwargs,
+    ) -> QWidget:
         """Create a themed header strip."""
 
     @abstractmethod

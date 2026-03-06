@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -64,9 +65,11 @@ def resolve_plugin_roots(source_root: Path, plugins_dir: str | None = None) -> l
     _add(plugins_dir)
     _add(os.environ.get("TIPS_PLUGINS_DIR"))
 
-    repo_root = _find_repo_root(source_root.resolve())
-    if repo_root is not None:
-        _add(repo_root / "plugins")
+    is_frozen = bool(getattr(sys, "frozen", False) or getattr(sys, "_MEIPASS", None))
+    if not is_frozen:
+        repo_root = _find_repo_root(source_root.resolve())
+        if repo_root is not None:
+            _add(repo_root / "plugins")
 
     bundled = resource_path("plugins")
     _add(bundled)

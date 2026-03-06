@@ -33,10 +33,11 @@ class StepWidget(QWidget):
         self.main_layout.setContentsMargins(8, 8, 8, 8)
         self.main_layout.setSpacing(8)
 
-    def _font(self, size: int, bold: bool = False) -> QFont:
+    def _font(self, role: str, bold: bool = False) -> QFont:
         font = QFont()
-        if self.theme.font_name:
-            font.setFamily(self.theme.font_name)
+        family, size = self.theme.resolve_role_font(role, preset_name=self.step_config.typography_preset)
+        if family:
+            font.setFamily(family)
         font.setPointSize(size)
         font.setBold(bold)
         return font
@@ -44,7 +45,7 @@ class StepWidget(QWidget):
     def title_label(self, text: str | None = None) -> QLabel:
         label = QLabel(text or self.step_config.title)
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        label.setFont(self._font(self.theme.title_size, bold=True))
+        label.setFont(self._font("title", bold=True))
         label.setStyleSheet(f"color: {self.theme.text_primary};")
         label.setFixedHeight(30)
         return label
@@ -59,7 +60,7 @@ class StepWidget(QWidget):
         label = QLabel(resolved)
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-        label.setFont(self._font(self.theme.base_size))
+        label.setFont(self._font("text"))
         label.setStyleSheet(f"color: {self.theme.text_primary};")
         if not resolved.strip():
             label.setVisible(False)

@@ -131,8 +131,33 @@ def test_validate_semantics_theme_checks(tmp_path):
         validate_config_semantics(cfg)
 
     cfg = _cfg(tmp_path)
-    cfg.theme.typography.base_size = 0
-    with pytest.raises(ConfigValidationError, match="typography sizes"):
+    cfg.theme.typography.presets["default"].text[0].font_size = 0
+    with pytest.raises(ConfigValidationError, match="font_size"):
+        validate_config_semantics(cfg)
+
+    cfg = _cfg(tmp_path)
+    cfg.theme.typography.default_preset = "missing"
+    with pytest.raises(ConfigValidationError, match="default_preset"):
+        validate_config_semantics(cfg)
+
+    cfg = _cfg(tmp_path)
+    cfg.steps[0].typography_preset = "missing"
+    with pytest.raises(ConfigValidationError, match="typography_preset"):
+        validate_config_semantics(cfg)
+
+    cfg = _cfg(tmp_path)
+    cfg.theme.typography.legacy_keys = ["font_name"]
+    with pytest.raises(ConfigValidationError, match="Legacy typography keys"):
+        validate_config_semantics(cfg)
+
+    cfg = _cfg(tmp_path)
+    cfg.theme.typography.fonts = []
+    with pytest.raises(ConfigValidationError, match="fonts must contain"):
+        validate_config_semantics(cfg)
+
+    cfg = _cfg(tmp_path)
+    cfg.theme.typography.presets = {}
+    with pytest.raises(ConfigValidationError, match="presets must contain"):
         validate_config_semantics(cfg)
 
 

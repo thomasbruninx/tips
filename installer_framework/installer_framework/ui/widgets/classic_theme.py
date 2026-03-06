@@ -22,10 +22,11 @@ from installer_framework.ui.theme import UITheme
 from installer_framework.ui.widgets.theme import ThemeWidgetFactory, WizardShellStyler
 
 
-def _set_font(widget, theme: UITheme, size: int, bold: bool = False) -> None:
-    font = QFont(theme.font_name or "")
-    if theme.font_name:
-        font.setFamily(theme.font_name)
+def _set_font(widget, theme: UITheme, role: str, preset_name: str | None = None, bold: bool = False) -> None:
+    family, size = theme.resolve_role_font(role, preset_name=preset_name)
+    font = QFont(family or "")
+    if family:
+        font.setFamily(family)
     font.setPointSize(size)
     font.setBold(bold)
     widget.setFont(font)
@@ -76,11 +77,19 @@ class _ClassicButton(QPushButton):
             }}
             """
         )
-        _set_font(self, theme, theme.base_size)
+        _set_font(self, theme, "text")
 
 
 class _ClassicHeader(_ClassicPanel):
-    def __init__(self, theme: UITheme, title: str, description: str, image_path: str | None = None, **kwargs) -> None:
+    def __init__(
+        self,
+        theme: UITheme,
+        title: str,
+        description: str,
+        image_path: str | None = None,
+        typography_preset: str | None = None,
+        **kwargs,
+    ) -> None:
         super().__init__(theme=theme, **kwargs)
         self.setObjectName("ThemeHeader")
         self.setStyleSheet(
@@ -98,14 +107,14 @@ class _ClassicHeader(_ClassicPanel):
 
         title_lbl = QLabel(title)
         title_lbl.setStyleSheet(f"color: {theme.text_primary};")
-        _set_font(title_lbl, theme, theme.title_size, bold=True)
+        _set_font(title_lbl, theme, "title", preset_name=typography_preset, bold=True)
         text_layout.addWidget(title_lbl)
 
         if description.strip():
             desc_lbl = QLabel(description)
             desc_lbl.setWordWrap(True)
             desc_lbl.setStyleSheet(f"color: {theme.text_primary};")
-            _set_font(desc_lbl, theme, theme.base_size)
+            _set_font(desc_lbl, theme, "text", preset_name=typography_preset)
             text_layout.addWidget(desc_lbl)
 
         layout.addWidget(text_wrap, 1)
@@ -152,7 +161,8 @@ class _ClassicSidebar(QWidget):
                 return
 
             painter.setPen(Qt.GlobalColor.white)
-            title_font = QFont(self.theme.font_name or "", self.theme.title_size)
+            title_family, title_size = self.theme.resolve_role_font("title")
+            title_font = QFont(title_family or "", title_size)
             title_font.setBold(True)
             painter.setFont(title_font)
             painter.drawText(
@@ -161,7 +171,8 @@ class _ClassicSidebar(QWidget):
                 self.title,
             )
 
-            sub_font = QFont(self.theme.font_name or "", self.theme.base_size)
+            text_family, text_size = self.theme.resolve_role_font("text")
+            sub_font = QFont(text_family or "", text_size)
             painter.setFont(sub_font)
             painter.drawText(
                 rect.adjusted(10, rect.height() - 55, -10, -10),
@@ -188,7 +199,7 @@ class _ClassicCheckboxRow(QWidget):
         self.button.setStyleSheet(
             f"QPushButton {{ border: none; text-align: left; color: {theme.text_primary}; background: transparent; padding-left: 2px; }}"
         )
-        _set_font(self.button, theme, theme.base_size)
+        _set_font(self.button, theme, "text")
         self.button.clicked.connect(lambda: self.checkbox.setChecked(not self.checkbox.isChecked()))
 
         layout.addWidget(self.checkbox)
@@ -214,7 +225,7 @@ class _ClassicGroupBox(QGroupBox):
             }}
             """
         )
-        _set_font(self, theme, theme.base_size, bold=True)
+        _set_font(self, theme, "text", bold=True)
 
         self.content = QWidget()
         self.content_layout = QVBoxLayout(self.content)
@@ -254,11 +265,11 @@ class _ClassicDialogFrame(QWidget):
         root.setSpacing(10)
 
         self.title_label = QLabel(title)
-        _set_font(self.title_label, theme, theme.base_size, bold=True)
+        _set_font(self.title_label, theme, "text", bold=True)
         self.title_label.setStyleSheet(f"color: {theme.text_primary};")
 
         self.message_label = QLabel(message)
-        _set_font(self.message_label, theme, theme.base_size)
+        _set_font(self.message_label, theme, "text")
         self.message_label.setStyleSheet(f"color: {theme.text_primary};")
         self.message_label.setWordWrap(True)
 
@@ -285,8 +296,22 @@ class ClassicWidgetFactory(ThemeWidgetFactory):
     def create_button(self, text: str, default_action: bool = False, **kwargs) -> QPushButton:
         return _ClassicButton(theme=self.theme, text=text, default_action=default_action, **kwargs)
 
-    def create_header(self, title: str, description: str, image_path: str | None = None, **kwargs) -> QWidget:
-        return _ClassicHeader(theme=self.theme, title=title, description=description, image_path=image_path, **kwargs)
+    def create_header(
+        self,
+        title: str,
+        description: str,
+        image_path: str | None = None,
+        typography_preset: str | None = None,
+        **kwargs,
+    ) -> QWidget:
+        return _ClassicHeader(
+            theme=self.theme,
+            title=title,
+            description=description,
+            image_path=image_path,
+            typography_preset=typography_preset,
+            **kwargs,
+        )
 
     def create_sidebar(self, title: str, subtitle: str = "", image_path: str | None = None, **kwargs) -> QWidget:
         return _ClassicSidebar(theme=self.theme, title=title, subtitle=subtitle, image_path=image_path, **kwargs)

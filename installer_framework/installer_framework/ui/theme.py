@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from PyQt6.QtGui import QFontDatabase
+from PyQt6.QtWidgets import QApplication
+
+from installer_framework.app.resources import resource_path
 from installer_framework.config.models import ThemeConfig
 
 ColorTuple = tuple[int, int, int, int]
 
 _ACTIVE_THEME: "UITheme | None" = None
+LOGGER = logging.getLogger(__name__)
 
 
 
@@ -66,6 +72,118 @@ class UITheme:
 
     config: ThemeConfig
     source_root: Path
+    _fonts_loaded: bool = field(init=False, default=False)
+    _catalog_families: set[str] = field(init=False, default_factory=set)
+    _available_families: set[str] = field(init=False, default_factory=set)
+    _warned_missing_ttf: set[str] = field(init=False, default_factory=set)
+    _warned_missing_catalog_family: set[str] = field(init=False, default_factory=set)
+
+    def _family_key(self, value: str) -> str:
+        return value.strip().casefold()
+
+    def _warn_once(self, bucket: set[str], key: str, message: str) -> None:
+        if key in bucket:
+            return
+        bucket.add(key)
+        LOGGER.warning(message)
+
+    def _resolve_font_ttf(self, value: str) -> Path | None:
+        raw_path = Path(value).expanduser()
+        if raw_path.is_absolute():
+            if raw_path.exists():
+                return raw_path
+            bundled_absolute_fallback = resource_path(f"fonts/{raw_path.name}")
+            if bundled_absolute_fallback.exists():
+                return bundled_absolute_fallback
+            return None
+
+        source_relative = (self.source_root / raw_path).resolve()
+        if source_relative.exists():
+            return source_relative
+        bundled_relative = resource_path(str(raw_path))
+        if bundled_relative.exists():
+            return bundled_relative
+        return None
+
+    def _ensure_fonts_loaded(self) -> None:
+        if self._fonts_loaded:
+            return
+        if QApplication.instance() is None:
+            return
+
+        self._catalog_families = {self._family_key(entry.font_family) for entry in self.config.typography.fonts}
+        self._available_families = {self._family_key(name) for name in QFontDatabase.families()}
+
+        for entry in self.config.typography.fonts:
+            ttf = (entry.font_ttf_path or "").strip()
+            if not ttf:
+                continue
+            resolved_ttf = self._resolve_font_ttf(ttf)
+            if not resolved_ttf:
+                self._warn_once(
+                    self._warned_missing_ttf,
+                    ttf,
+                    f"Typography font_ttf_path not found, falling back to next candidate: {ttf}",
+                )
+                continue
+            font_id = QFontDatabase.addApplicationFont(str(resolved_ttf))
+            if font_id < 0:
+                self._warn_once(
+                    self._warned_missing_ttf,
+                    str(resolved_ttf),
+                    f"Failed to load font TTF, falling back to next candidate: {resolved_ttf}",
+                )
+                continue
+            for family in QFontDatabase.applicationFontFamilies(font_id):
+                self._available_families.add(self._family_key(family))
+
+        # Refresh from the DB after registering custom fonts.
+        self._available_families = {self._family_key(name) for name in QFontDatabase.families()} | self._available_families
+        self._fonts_loaded = True
+
+    def _default_preset_name(self) -> str:
+        presets = self.config.typography.presets
+        if self.config.typography.default_preset and self.config.typography.default_preset in presets:
+            return self.config.typography.default_preset
+        if presets:
+            return next(iter(presets.keys()))
+        return ""
+
+    def effective_preset_for_step(self, step_preset: str | None) -> str:
+        if step_preset and step_preset in self.config.typography.presets:
+            return step_preset
+        return self._default_preset_name()
+
+    def resolve_role_font(self, role: str, preset_name: str | None = None) -> tuple[str | None, int]:
+        selected_preset = self.effective_preset_for_step(preset_name)
+        preset = self.config.typography.presets.get(selected_preset)
+        if not preset:
+            return (None, 12)
+
+        role_entries = preset.title if role == "title" else preset.text
+        if not role_entries:
+            return (None, 12)
+
+        if QApplication.instance() is None:
+            entry = role_entries[0]
+            return (entry.font_family.strip() or None, entry.font_size)
+
+        self._ensure_fonts_loaded()
+        for entry in role_entries:
+            family = entry.font_family.strip()
+            if not family:
+                continue
+            if self._family_key(family) not in self._catalog_families:
+                self._warn_once(
+                    self._warned_missing_catalog_family,
+                    family,
+                    f"Typography family '{family}' is not declared in theme.typography.fonts. Falling back if unavailable.",
+                )
+            if self._family_key(family) in self._available_families:
+                return (family, entry.font_size)
+
+        fallback = role_entries[0]
+        return (fallback.font_family.strip() or None, fallback.font_size)
 
     @property
     def style(self) -> str:
@@ -133,6 +251,12 @@ class UITheme:
         path = Path(value)
         if not path.is_absolute():
             path = (self.source_root / value).resolve()
+            if path.exists():
+                return path
+            bundled = resource_path(value)
+            if bundled.exists():
+                return bundled
+            return None
         if path.exists():
             return path
         return None
@@ -147,19 +271,18 @@ class UITheme:
 
     @property
     def font_name(self) -> str | None:
-        font_value = self.config.typography.font_name.strip()
-        if not font_value:
-            return None
-        font_path = self.resolve_asset(font_value)
-        return str(font_path) if font_path else font_value
+        family, _size = self.resolve_role_font("text")
+        return family
 
     @property
     def base_size(self) -> int:
-        return self.config.typography.base_size
+        _family, size = self.resolve_role_font("text")
+        return size
 
     @property
     def title_size(self) -> int:
-        return self.config.typography.title_size
+        _family, size = self.resolve_role_font("title")
+        return size
 
     @property
     def window_size(self) -> tuple[int, int]:

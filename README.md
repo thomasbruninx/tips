@@ -221,6 +221,11 @@ For packaged installer executable icons, use platform-specific keys:
 ```
 
 Build scripts resolve these paths relative to the JSON config file directory.
+Typography font packaging:
+- Build scripts auto-discover `theme.typography.fonts[*].font_ttf_path`.
+- Relative TTF paths are resolved from the config directory and bundled into the app.
+- Absolute TTF paths are bundled under `fonts/` in the package.
+- Missing TTF paths produce warnings and are skipped (build continues).
 
 ### Theme
 
@@ -262,12 +267,38 @@ Modern theme behavior:
     "button_height": 28
   },
   "typography": {
-    "font_name": "Tahoma",
-    "base_size": 14,
-    "title_size": 18
+    "fonts": [
+      {
+        "font_family": "SF Pro Text",
+        "font_ttf_path": "assets/fonts/SF-Pro-Text-Regular.ttf"
+      },
+      {
+        "font_family": "Segoe UI"
+      }
+    ],
+    "default_preset": "default",
+    "presets": {
+      "default": {
+        "title": [
+          {"font_family": "SF Pro Text", "font_size": 18},
+          {"font_family": "Segoe UI", "font_size": 18}
+        ],
+        "text": [
+          {"font_family": "SF Pro Text", "font_size": 14},
+          {"font_family": "Segoe UI", "font_size": 14}
+        ]
+      }
+    }
   }
 }
 ```
+
+Typography notes:
+- `theme.typography.fonts` is the global font catalog (family + optional TTF path).
+- `theme.typography.presets` defines fallback stacks for `title` and `text` roles.
+- `theme.typography.default_preset` is optional; if omitted, the first preset is used.
+- Missing or unloadable TTF files are warned and skipped at runtime/build; fallback candidates continue.
+- Legacy keys `font_name`, `base_size`, and `title_size` are no longer supported.
 
 ### Install Scope
 
@@ -299,6 +330,7 @@ Step text fields:
 - `description`: legacy shared description used by header and body when no overrides are set.
 - `header_description`: optional override for the wizard header description.
 - `body_description`: optional override for the description rendered inside the step widget.
+- `typography_preset`: optional preset key from `theme.typography.presets`; applies to step body and that step header.
 
 You can hide one side explicitly by setting that override to an empty string.
 

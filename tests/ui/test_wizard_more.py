@@ -83,6 +83,27 @@ def test_wizard_update_nav_states(qtbot, tmp_path, monkeypatch):
     assert wizard.back_btn.isEnabled() is False
 
 
+def test_wizard_header_receives_step_typography_preset(qtbot, tmp_path, monkeypatch):
+    ctx = make_context(tmp_path)
+    monkeypatch.setattr("installer_framework.ui.wizard.show_message_dialog", lambda *args, **kwargs: None)
+    monkeypatch.setattr("installer_framework.ui.wizard.show_confirm_dialog", lambda *args, **kwargs: None)
+    monkeypatch.setattr("installer_framework.ui.steps.install.InstallStep.start_install", lambda self: None)
+
+    wizard = Wizard(config=ctx.config, ctx=ctx)
+    qtbot.addWidget(wizard)
+    wizard.visible_steps[0].typography_preset = "default"
+
+    captured: list[str | None] = []
+
+    def _capture_header(*args, **kwargs):
+        captured.append(kwargs.get("typography_preset"))
+        return QWidget()
+
+    monkeypatch.setattr(wizard.widget_factory, "create_header", _capture_header)
+    wizard.show_step(0)
+    assert captured[-1] == "default"
+
+
 def test_wizard_commit_step_navigation_override_and_state_updates(qtbot, tmp_path, monkeypatch):
     ctx = make_context(tmp_path)
     monkeypatch.setattr("installer_framework.ui.wizard.show_message_dialog", lambda *args, **kwargs: None)

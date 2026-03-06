@@ -31,6 +31,71 @@ OUT_DIR="$PROJECT_ROOT/dist/linux"
 mkdir -p "$OUT_DIR"
 REPO_ROOT="$(cd "$PROJECT_ROOT/.." && pwd)"
 PLUGINS_DIR="$REPO_ROOT/plugins"
+CONFIG_ARG="${1:-examples/sample_installer.json}"
+CONFIG_PATH="$($PYTHON_BIN - "$PROJECT_ROOT" "$CONFIG_ARG" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+arg = Path(sys.argv[2]).expanduser()
+if not arg.is_absolute():
+    arg = root / arg
+print(arg.resolve())
+PY
+)"
+
+resolve_typography_font_data_entries() {
+  "$PYTHON_BIN" - "$PROJECT_ROOT" "$CONFIG_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+project_root = Path(sys.argv[1]).resolve()
+config_path = Path(sys.argv[2]).resolve()
+if not config_path.exists():
+    sys.exit(0)
+
+try:
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    print(f"Warning: failed to parse config for typography font discovery: {exc}", file=sys.stderr)
+    sys.exit(0)
+
+fonts = (((payload.get("theme") or {}).get("typography") or {}).get("fonts") or [])
+config_dir = config_path.parent
+
+try:
+    config_dir_rel = config_dir.relative_to(project_root)
+except ValueError:
+    config_dir_rel = Path("config_assets")
+
+seen: set[tuple[str, str]] = set()
+for item in fonts:
+    if not isinstance(item, dict):
+        continue
+    raw_path = item.get("font_ttf_path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        continue
+    candidate = Path(raw_path).expanduser()
+    if candidate.is_absolute():
+        source = candidate.resolve()
+        dest_dir = Path("fonts")
+    else:
+        source = (config_dir / candidate).resolve()
+        parent = candidate.parent if str(candidate.parent) != "." else Path("")
+        dest_dir = config_dir_rel / parent
+
+    if not source.exists():
+        print(f"Warning: configured font_ttf_path not found: {source}", file=sys.stderr)
+        continue
+
+    key = (str(source), dest_dir.as_posix())
+    if key in seen:
+        continue
+    seen.add(key)
+    print(f"{key[0]}|{key[1]}")
+PY
+}
 
 PYINSTALLER_ARGS=(
   --noconfirm
@@ -45,6 +110,12 @@ PYINSTALLER_ARGS=(
   --add-data "examples:examples"
   --add-data "installer_framework/config/schema.json:installer_framework/config"
 )
+
+while IFS='|' read -r font_src font_dest; do
+  [[ -z "${font_src:-}" || -z "${font_dest:-}" ]] && continue
+  echo "Bundling typography font: $font_src -> $font_dest"
+  PYINSTALLER_ARGS+=(--add-data "$font_src:$font_dest")
+done < <(resolve_typography_font_data_entries)
 
 if [[ -d "$PLUGINS_DIR" ]]; then
   echo "Checking plugins in: $PLUGINS_DIR"

@@ -57,9 +57,65 @@
         "typography": {
           "type": "object",
           "properties": {
-            "font_name": {"type": "string"},
-            "base_size": {"type": "integer", "minimum": 1},
-            "title_size": {"type": "integer", "minimum": 1}
+            "fonts": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["font_family"],
+                "properties": {
+                  "font_family": {"type": "string", "minLength": 1},
+                  "font_ttf_path": {"type": "string", "minLength": 1}
+                },
+                "additionalProperties": false
+              }
+            },
+            "default_preset": {"type": "string", "minLength": 1},
+            "presets": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "required": ["title", "text"],
+                "properties": {
+                  "title": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["font_family", "font_size"],
+                      "properties": {
+                        "font_family": {"type": "string", "minLength": 1},
+                        "font_size": {"type": "integer", "minimum": 1}
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "text": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["font_family", "font_size"],
+                      "properties": {
+                        "font_family": {"type": "string", "minLength": 1},
+                        "font_size": {"type": "integer", "minimum": 1}
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["fonts", "presets"],
+          "not": {
+            "anyOf": [
+              {"required": ["font_name"]},
+              {"required": ["base_size"]},
+              {"required": ["title_size"]}
+            ]
           },
           "additionalProperties": true
         }
@@ -79,6 +135,7 @@
           "description": {"type": "string"},
           "header_description": {"type": "string"},
           "body_description": {"type": "string"},
+          "typography_preset": {"type": "string", "minLength": 1},
           "show_if": {"type": "string"},
           "license_path": {"type": "string"},
           "fields": {

@@ -167,6 +167,7 @@ class Wizard(QMainWindow):
             title=step_cfg.title,
             description=header_description,
             image_path=str(header_image) if header_image else None,
+            typography_preset=step_cfg.typography_preset,
         )
         self.header_layout.addWidget(header)
 

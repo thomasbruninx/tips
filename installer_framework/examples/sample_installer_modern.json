@@ -30,9 +30,65 @@
       "button_height": 30
     },
     "typography": {
-      "font_name": "Arial",
-      "base_size": 13,
-      "title_size": 17
+      "fonts": [
+        {
+          "font_family": "Open Sans",
+          "font_ttf_path": "assets/OpenSans-Regular.ttf"
+        },
+        {
+          "font_family": "Segoe UI"
+        },
+        {
+          "font_family": "Arial"
+        }
+      ],
+      "default_preset": "default",
+      "presets": {
+        "default": {
+          "title": [
+            {
+              "font_family": "Open Sans",
+              "font_size": 17
+            },
+            {
+              "font_family": "Segoe UI",
+              "font_size": 17
+            }
+          ],
+          "text": [
+            {
+              "font_family": "Open Sans",
+              "font_size": 13
+            },
+            {
+              "font_family": "Segoe UI",
+              "font_size": 13
+            }
+          ]
+        },
+        "dense": {
+          "title": [
+            {
+              "font_family": "Open Sans",
+              "font_size": 16
+            },
+            {
+              "font_family": "Segoe UI",
+              "font_size": 16
+            }
+          ],
+          "text": [
+            {
+              "font_family": "Open Sans",
+              "font_size": 12
+            },
+            {
+              "font_family": "Segoe UI",
+              "font_size": 12
+            }
+          ]
+        }
+      }
     }
   },
   "windows": {
@@ -106,6 +162,7 @@
       "type": "license",
       "title": "License Agreement",
       "description": "Please review the license and accept to continue.",
+      "typography_preset": "dense",
       "license_path": "assets/license.txt"
     },
     {
