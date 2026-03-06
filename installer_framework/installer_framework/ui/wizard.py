@@ -17,7 +17,11 @@ from installer_framework.ui.step_factory import StepFactory
 from installer_framework.ui.theme import UITheme, get_active_theme
 from installer_framework.ui.widgets.theme import build_shell_styler, build_widget_factory
 from installer_framework.ui.widgets.dialogs import show_confirm_dialog, show_message_dialog
-from installer_framework.util.privileges import relaunch_as_admin_windows, relaunch_with_sudo_unix
+from installer_framework.util.privileges import (
+    relaunch_as_admin_macos,
+    relaunch_as_admin_windows,
+    relaunch_with_sudo_unix,
+)
 
 
 class Wizard(QMainWindow):
@@ -341,6 +345,20 @@ class Wizard(QMainWindow):
                 "error",
                 "Administrator privileges required",
                 "System-wide install needs elevation. Please re-run this installer as Administrator.",
+            )
+            return False
+
+        if self.ctx.env.is_macos:
+            if self.config.macos.get("allow_rights_elevation", False):
+                relaunched = relaunch_as_admin_macos(sys.argv[1:])
+                if relaunched:
+                    self.close()
+                    QApplication.instance().quit()
+                    return False
+            show_message_dialog(
+                "error",
+                "Administrator privileges required",
+                "System-wide install requires administrator privileges on macOS. Re-run with elevated rights.",
             )
             return False
 

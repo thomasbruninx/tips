@@ -97,7 +97,8 @@
     "installer_icon_ico": "assets/appicon.ico"
   },
   "macos": {
-    "installer_icon_icns": "assets/appicon.icns"
+    "installer_icon_icns": "assets/appicon.icns",
+    "allow_rights_elevation": true
   },
   "unix": {
     "allow_sudo_relaunch": false

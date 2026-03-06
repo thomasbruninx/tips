@@ -231,6 +231,45 @@ def test_wizard_privilege_paths_with_relaunch(qtbot, tmp_path, monkeypatch):
     qtbot.addWidget(wizard)
     assert wizard._ensure_scope_privileges() is False
 
+    ctx_macos = make_context(
+        tmp_path,
+        config_overrides={
+            "macos": {"allow_rights_elevation": True},
+            "unix": {"allow_sudo_relaunch": True},
+        },
+    )
+    ctx_macos.state.install_scope = "system"
+    ctx_macos.is_elevated = False
+    ctx_macos.env = default_env(os_name="darwin")
+
+    monkeypatch.setattr("installer_framework.ui.wizard.relaunch_as_admin_macos", lambda _argv: True)
+    monkeypatch.setattr(
+        "installer_framework.ui.wizard.relaunch_with_sudo_unix",
+        lambda _argv: (_ for _ in ()).throw(AssertionError("macOS path must not use unix sudo relaunch")),
+    )
+
+    wizard_macos = Wizard(config=ctx_macos.config, ctx=ctx_macos)
+    qtbot.addWidget(wizard_macos)
+    assert wizard_macos._ensure_scope_privileges() is False
+
+    ctx_macos_blocked = make_context(
+        tmp_path,
+        config_overrides={
+            "macos": {"allow_rights_elevation": False},
+            "unix": {"allow_sudo_relaunch": True},
+        },
+    )
+    ctx_macos_blocked.state.install_scope = "system"
+    ctx_macos_blocked.is_elevated = False
+    ctx_macos_blocked.env = default_env(os_name="darwin")
+    mac_error_calls: list[tuple] = []
+    monkeypatch.setattr("installer_framework.ui.wizard.show_message_dialog", lambda *args, **kwargs: mac_error_calls.append(args))
+
+    wizard_macos_blocked = Wizard(config=ctx_macos_blocked.config, ctx=ctx_macos_blocked)
+    qtbot.addWidget(wizard_macos_blocked)
+    assert wizard_macos_blocked._ensure_scope_privileges() is False
+    assert mac_error_calls and "Administrator privileges required" in mac_error_calls[-1][1]
+
     ctx2 = make_context(
         tmp_path,
         config_overrides={"unix": {"allow_sudo_relaunch": True}},

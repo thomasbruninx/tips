@@ -31,7 +31,12 @@ OUT_DIR="$PROJECT_ROOT/dist/linux"
 mkdir -p "$OUT_DIR"
 REPO_ROOT="$(cd "$PROJECT_ROOT/.." && pwd)"
 PLUGINS_DIR="$REPO_ROOT/plugins"
-CONFIG_ARG="${1:-examples/sample_installer.json}"
+if [[ $# -lt 1 || -z "${1:-}" ]]; then
+  echo "Error: missing config path." >&2
+  echo "Usage: ./build/build_linux.sh <config.json>" >&2
+  exit 1
+fi
+CONFIG_ARG="$1"
 CONFIG_PATH="$($PYTHON_BIN - "$PROJECT_ROOT" "$CONFIG_ARG" <<'PY'
 from pathlib import Path
 import sys
@@ -43,6 +48,53 @@ if not arg.is_absolute():
 print(arg.resolve())
 PY
 )"
+"$PYTHON_BIN" - "$CONFIG_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+config_path = Path(sys.argv[1]).resolve()
+if config_path.suffix.lower() != ".json":
+    print(f"Error: config path must point to a .json file: {config_path}", file=sys.stderr)
+    raise SystemExit(1)
+if not config_path.exists():
+    print(f"Error: config file not found: {config_path}", file=sys.stderr)
+    raise SystemExit(1)
+if not config_path.is_file():
+    print(f"Error: config path is not a file: {config_path}", file=sys.stderr)
+    raise SystemExit(1)
+
+try:
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    print(f"Error: invalid JSON in config file '{config_path}': {exc}", file=sys.stderr)
+    raise SystemExit(1)
+
+if not isinstance(payload, dict):
+    print(f"Error: config root must be a JSON object: {config_path}", file=sys.stderr)
+    raise SystemExit(1)
+PY
+CONFIG_BUNDLE_PATH="$($PYTHON_BIN - "$PROJECT_ROOT" "$CONFIG_PATH" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1]).resolve()
+config_path = Path(sys.argv[2]).resolve()
+
+try:
+    print(config_path.relative_to(root).as_posix())
+except ValueError:
+    print("examples/sample_installer.json")
+    print(
+        f"Warning: config '{config_path}' is outside project root; "
+        "bundled default will fall back to examples/sample_installer.json",
+        file=sys.stderr,
+    )
+PY
+)"
+DEFAULT_CONFIG_MARKER="$PROJECT_ROOT/build/default_config_path.txt"
+mkdir -p "$(dirname "$DEFAULT_CONFIG_MARKER")"
+printf '%s\n' "$CONFIG_BUNDLE_PATH" > "$DEFAULT_CONFIG_MARKER"
 
 resolve_typography_font_data_entries() {
   "$PYTHON_BIN" - "$PROJECT_ROOT" "$CONFIG_PATH" <<'PY'
@@ -108,6 +160,7 @@ PYINSTALLER_ARGS=(
   --hidden-import PyQt6.QtWidgets
   --hidden-import PyQt6.sip
   --add-data "examples:examples"
+  --add-data "$DEFAULT_CONFIG_MARKER:build"
   --add-data "installer_framework/config/schema.json:installer_framework/config"
 )
 

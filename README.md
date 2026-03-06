@@ -569,11 +569,13 @@ Desktop entries:
 - System: `/Applications/<ProductName>.app`
 - System installs require admin/root.
 
-Optional sudo relaunch:
+Optional rights elevation relaunch:
 
 ```json
-"unix": { "allow_sudo_relaunch": true }
+"macos": { "allow_rights_elevation": true }
 ```
+
+Note: on macOS, `unix.allow_sudo_relaunch` is ignored.
 
 ## Extend the Framework
 
@@ -596,6 +598,7 @@ Use plugins instead of editing core mappings.
 ## Build Distributables
 
 All scripts output to `dist/<platform>/`.
+All build scripts require an explicit JSON config path and fail fast when the path is missing, does not exist, or contains invalid JSON.
 
 ### Windows
 
@@ -612,7 +615,7 @@ If repo-root `plugins/` exists, compatible plugins are analyzed during build and
 ### Linux
 
 ```bash
-./build/build_linux.sh
+./build/build_linux.sh examples/sample_installer.json
 ```
 
 Output: `dist/linux/tips-installer/` (onefolder)

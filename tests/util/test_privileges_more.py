@@ -48,3 +48,14 @@ def test_relaunch_with_sudo_unix_failure_paths(monkeypatch):
 
     monkeypatch.setattr(privileges.subprocess, "run", _raise)
     assert privileges.relaunch_with_sudo_unix(["-m", "demo"]) is False
+
+
+def test_relaunch_as_admin_macos_failure_paths(monkeypatch):
+    monkeypatch.setattr(privileges.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=1))
+    assert privileges.relaunch_as_admin_macos(["-m", "installer_framework.main"]) is False
+
+    def _raise(*_args, **_kwargs):
+        raise RuntimeError("osascript missing")
+
+    monkeypatch.setattr(privileges.subprocess, "run", _raise)
+    assert privileges.relaunch_as_admin_macos(["-m", "installer_framework.main"]) is False

@@ -1,5 +1,5 @@
 param(
-  [string]$ConfigPath = "examples/sample_installer.json"
+  [string]$ConfigPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,6 +16,51 @@ function Resolve-ConfigPath([string]$PathArg) {
     return [System.IO.Path]::GetFullPath($PathArg)
   }
   return [System.IO.Path]::GetFullPath((Join-Path $ProjectRoot $PathArg))
+}
+
+function Assert-ValidConfigJson([string]$ResolvedConfigPath) {
+  if ([string]::IsNullOrWhiteSpace($ResolvedConfigPath)) {
+    throw "Error: missing config path. Usage: ./build/build_windows.ps1 -ConfigPath <config.json>"
+  }
+
+  if ([System.IO.Path]::GetExtension($ResolvedConfigPath).ToLowerInvariant() -ne ".json") {
+    throw "Error: config path must point to a .json file: $ResolvedConfigPath"
+  }
+
+  if (-not (Test-Path -LiteralPath $ResolvedConfigPath -PathType Leaf)) {
+    throw "Error: config file not found: $ResolvedConfigPath"
+  }
+
+  try {
+    $payload = Get-Content -Raw -LiteralPath $ResolvedConfigPath | ConvertFrom-Json -ErrorAction Stop
+  } catch {
+    throw "Error: invalid JSON in config file '$ResolvedConfigPath': $($_.Exception.Message)"
+  }
+
+  if ($payload -isnot [pscustomobject] -and $payload -isnot [hashtable]) {
+    throw "Error: config root must be a JSON object: $ResolvedConfigPath"
+  }
+}
+
+function Get-BundledDefaultConfigPath([string]$ResolvedConfigPath) {
+  if (-not $ResolvedConfigPath) {
+    return "examples/sample_installer.json"
+  }
+
+  $projectRootPath = [System.IO.Path]::GetFullPath([string]$ProjectRoot)
+  $configPath = [System.IO.Path]::GetFullPath($ResolvedConfigPath)
+  $projectRootPrefix = $projectRootPath
+  if (-not $projectRootPrefix.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+    $projectRootPrefix += [System.IO.Path]::DirectorySeparatorChar
+  }
+
+  if ($configPath.StartsWith($projectRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    $relative = $configPath.Substring($projectRootPrefix.Length)
+    return $relative -replace "\\", "/"
+  }
+
+  Write-Warning "Config path is outside project root; bundled default falls back to examples/sample_installer.json"
+  return "examples/sample_installer.json"
 }
 
 function Get-WindowsIconPath([string]$ResolvedConfigPath) {
@@ -160,6 +205,11 @@ if ($env:PYTHON) {
 }
 
 $ResolvedConfigPath = Resolve-ConfigPath $ConfigPath
+Assert-ValidConfigJson $ResolvedConfigPath
+$BundledDefaultConfigPath = Get-BundledDefaultConfigPath $ResolvedConfigPath
+$DefaultConfigMarker = Join-Path $ProjectRoot "build/default_config_path.txt"
+New-Item -ItemType Directory -Path (Split-Path -Parent $DefaultConfigMarker) -Force | Out-Null
+Set-Content -Path $DefaultConfigMarker -Value $BundledDefaultConfigPath -Encoding utf8
 $IconPath = Get-WindowsIconPath $ResolvedConfigPath
 $TypographyFontEntries = Get-TypographyFontDataEntries $ResolvedConfigPath
 $RepoRoot = Resolve-Path (Join-Path $ProjectRoot "..")
@@ -190,6 +240,7 @@ $CommonArgs = @(
   "--hidden-import", "PyQt6.QtWidgets",
   "--hidden-import", "PyQt6.sip",
   "--add-data", "examples;examples",
+  "--add-data", "$DefaultConfigMarker;build",
   "--add-data", "installer_framework/config/schema.json;installer_framework/config",
   "--add-data", "tools;tools"
 )

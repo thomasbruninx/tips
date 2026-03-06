@@ -268,7 +268,8 @@
     "macos": {
       "type": "object",
       "properties": {
-        "installer_icon_icns": {"type": "string"}
+        "installer_icon_icns": {"type": "string"},
+        "allow_rights_elevation": {"type": "boolean"}
       },
       "additionalProperties": true
     },
