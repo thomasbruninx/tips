@@ -261,6 +261,53 @@ Available symbols:
 - `selected_features`
 - `scope` / `install_scope`
 
+### `write_dotfile` (v2)
+
+`write_dotfile` now uses an explicit file target path and supports append mode.
+
+Supported keys:
+- `target_path` (required): file path, supports `~` and environment variables.
+- `append` (optional, default `false`): append rendered payload instead of overwrite.
+- `content` (optional): string (templated) or structured JSON payload.
+
+Examples:
+
+```json
+{
+  "type": "write_dotfile",
+  "target_path": "~/.example"
+}
+```
+
+```json
+{
+  "type": "write_dotfile",
+  "target_path": "~/.example",
+  "append": true,
+  "content": "installed={version} dir={install_dir}"
+}
+```
+
+```json
+{
+  "type": "write_dotfile",
+  "target_path": "~/.examplefolder/settings.ini",
+  "content": {
+    "product_id": "{product_id}",
+    "scope": "{scope}"
+  }
+}
+```
+
+Notes:
+- Parent directories are created automatically only when missing.
+- Relative `target_path` values are resolved from the config directory (`source_root`).
+- Legacy keys are no longer supported for this action:
+  - `scope`
+  - `user_base`
+  - `system_base`
+  - `file_name`
+
 ## Install Scope Paths and Permissions
 
 ### Windows

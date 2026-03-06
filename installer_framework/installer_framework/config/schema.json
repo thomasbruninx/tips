@@ -163,8 +163,30 @@
               "show_message",
               "run_script"
             ]
-          }
+          },
+          "target_path": {"type": "string", "minLength": 1},
+          "append": {"type": "boolean"},
+          "content": {}
         },
+        "allOf": [
+          {
+            "if": {
+              "properties": {"type": {"const": "write_dotfile"}},
+              "required": ["type"]
+            },
+            "then": {
+              "required": ["target_path"],
+              "not": {
+                "anyOf": [
+                  {"required": ["scope"]},
+                  {"required": ["user_base"]},
+                  {"required": ["system_base"]},
+                  {"required": ["file_name"]}
+                ]
+              }
+            }
+          }
+        ],
         "additionalProperties": true
       }
     },

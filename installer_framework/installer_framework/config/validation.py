@@ -79,6 +79,27 @@ def validate_config_semantics(config: InstallerConfig) -> None:
     if not config.actions:
         raise ConfigValidationError("At least one install action is required")
 
+    for action in config.actions:
+        if action.type != "write_dotfile":
+            continue
+        params = action.params
+        target_path = params.get("target_path")
+        if not isinstance(target_path, str) or not target_path.strip():
+            raise ConfigValidationError("write_dotfile requires non-empty string 'target_path'")
+
+        append_value = params.get("append")
+        if append_value is not None and not isinstance(append_value, bool):
+            raise ConfigValidationError("write_dotfile 'append' must be boolean when provided")
+
+        legacy_keys = {"scope", "user_base", "system_base", "file_name"}
+        used_legacy = sorted(k for k in legacy_keys if k in params)
+        if used_legacy:
+            raise ConfigValidationError(
+                "write_dotfile no longer supports legacy keys: "
+                + ", ".join(used_legacy)
+                + ". Use 'target_path' instead."
+            )
+
     _validate_theme(config)
 
 

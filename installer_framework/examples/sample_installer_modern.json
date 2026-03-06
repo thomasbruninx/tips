@@ -208,7 +208,7 @@
     },
     {
       "type": "write_dotfile",
-      "file_name": "install-info.json"
+      "target_path": "~/.tips-demo-app/install-info.json"
     },
     {
       "type": "write_registry",

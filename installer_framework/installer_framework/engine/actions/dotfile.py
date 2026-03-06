@@ -1,12 +1,12 @@
-"""write_dotfile action implementation for Linux/macOS (and fallback metadata)."""
+"""write_dotfile action implementation with explicit target path and append mode."""
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
-from installer_framework.app.paths import system_config_dir, user_config_dir
 from installer_framework.engine.action_base import Action
 from installer_framework.engine.context import InstallerContext
 from installer_framework.util.fs import ensure_dir
@@ -16,38 +16,77 @@ class WriteDotfileAction(Action):
     def __init__(self, params: dict[str, Any]) -> None:
         self.params = params
 
+    def _resolve_target(self, ctx: InstallerContext) -> Path:
+        target_path = str(self.params.get("target_path", "")).strip()
+        if not target_path:
+            raise ValueError("write_dotfile requires non-empty 'target_path'")
+
+        expanded = os.path.expandvars(os.path.expanduser(target_path))
+        path = Path(expanded)
+        if not path.is_absolute():
+            path = ctx.config.source_root / path
+        return path.resolve()
+
+    def _default_content(self, ctx: InstallerContext) -> dict[str, Any]:
+        return {
+            "product_id": ctx.config.product_id,
+            "product_name": ctx.config.branding.product_name,
+            "publisher": ctx.config.branding.publisher,
+            "version": ctx.config.branding.version,
+            "install_dir": ctx.state.install_dir,
+            "scope": ctx.state.install_scope,
+            "selected_features": ctx.state.selected_features,
+        }
+
+    def _render_payload(self, ctx: InstallerContext, content: Any) -> str:
+        substitutions = {
+            "install_dir": ctx.state.install_dir,
+            "scope": ctx.state.install_scope,
+            "version": ctx.config.branding.version,
+            "product_id": ctx.config.product_id,
+            "product_name": ctx.config.branding.product_name,
+            "publisher": ctx.config.branding.publisher,
+        }
+
+        def _render_value(value: Any) -> Any:
+            if isinstance(value, str):
+                return value.format(**substitutions)
+            if isinstance(value, list):
+                return [_render_value(item) for item in value]
+            if isinstance(value, dict):
+                return {key: _render_value(item) for key, item in value.items()}
+            return value
+
+        rendered = _render_value(content)
+        if isinstance(rendered, str):
+            return rendered
+        return json.dumps(rendered, indent=2)
+
     def execute(self, ctx: InstallerContext, progress, log) -> dict:
-        scope = self.params.get("scope") or ctx.state.install_scope
-        file_name = self.params.get("file_name", "install-info.json")
+        target = self._resolve_target(ctx)
+        append = self.params.get("append", False)
+        if not isinstance(append, bool):
+            raise ValueError("write_dotfile 'append' must be boolean")
         content = self.params.get("content")
-
-        if scope == "system":
-            base = Path(self.params.get("system_base", str(system_config_dir(ctx.config.product_id))))
-        else:
-            base = Path(self.params.get("user_base", str(user_config_dir(ctx.config.product_id))))
-
-        ensure_dir(base)
-        target = base / file_name
-
         if content is None:
-            content = {
-                "product_id": ctx.config.product_id,
-                "product_name": ctx.config.branding.product_name,
-                "publisher": ctx.config.branding.publisher,
-                "version": ctx.config.branding.version,
-                "install_dir": ctx.state.install_dir,
-                "scope": ctx.state.install_scope,
-                "selected_features": ctx.state.selected_features,
-            }
+            content = self._default_content(ctx)
 
-        serialized = json.dumps(content, indent=2)
-        serialized = serialized.format(
-            install_dir=ctx.state.install_dir,
-            scope=ctx.state.install_scope,
-            version=ctx.config.branding.version,
-        )
-        target.write_text(serialized, encoding="utf-8")
+        if not target.parent.exists():
+            ensure_dir(target.parent)
 
-        progress(100, f"Wrote configuration to {target}")
-        log(f"Dotfile written: {target}")
-        return {"action": "write_dotfile", "path": str(target)}
+        payload = self._render_payload(ctx, content)
+        if append:
+            if not payload.endswith("\n"):
+                payload = f"{payload}\n"
+            with target.open("a", encoding="utf-8") as fh:
+                fh.write(payload)
+            progress(100, f"Appended configuration to {target}")
+            log(f"Dotfile appended: {target}")
+            mode = "append"
+        else:
+            target.write_text(payload, encoding="utf-8")
+            progress(100, f"Wrote configuration to {target}")
+            log(f"Dotfile written: {target}")
+            mode = "write"
+
+        return {"action": "write_dotfile", "path": str(target), "mode": mode}
