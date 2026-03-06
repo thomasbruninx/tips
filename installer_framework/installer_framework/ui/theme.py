@@ -45,12 +45,13 @@ def _clamp_channel(v: int) -> int:
 
 
 def tint_hex(value: str, amount: float) -> str:
-    r, g, b, a = hex_to_rgba_int(value)
+    r, g, b, _a = hex_to_rgba_int(value)
     delta = int(round(255 * amount))
     tr = _clamp_channel(r + delta)
     tg = _clamp_channel(g + delta)
     tb = _clamp_channel(b + delta)
-    return f"#{tr:02X}{tg:02X}{tb:02X}{a:02X}"
+    # Return Qt-safe opaque color format to avoid alpha-order ambiguity in QSS.
+    return f"#{tr:02X}{tg:02X}{tb:02X}"
 
 
 
