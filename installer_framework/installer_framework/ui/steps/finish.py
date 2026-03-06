@@ -8,13 +8,12 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
 
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicGroupBox
 
 
 class FinishStep(StepWidget):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        group = ClassicGroupBox(theme=self.theme, title="Setup Complete")
+        group = self.widget_factory.create_group_box(title="Setup Complete")
         self.summary = QLabel("")
         self.summary.setWordWrap(True)
         self.summary.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)

@@ -22,7 +22,7 @@ _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 def _validate_theme(config: InstallerConfig) -> None:
     theme = config.theme
 
-    if theme.style != "classic":
+    if theme.style not in {"classic", "modern"}:
         raise ConfigValidationError(f"Unsupported theme.style: {theme.style}")
 
     colors = theme.colors

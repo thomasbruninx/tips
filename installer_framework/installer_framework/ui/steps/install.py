@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import QLabel, QProgressBar
 
 from installer_framework.engine.runner import ActionRunner
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicGroupBox
 from installer_framework.ui.widgets.dialogs import show_message_dialog
 from installer_framework.ui.widgets.log_pane import LogPane
 
@@ -53,7 +52,7 @@ class InstallStep(StepWidget):
         self._thread: QThread | None = None
         self._worker: InstallWorker | None = None
 
-        group = ClassicGroupBox(theme=self.theme, title="Installing")
+        group = self.widget_factory.create_group_box(title="Installing")
         self.progress_label = QLabel("Preparing installation...")
         self.progress_label.setStyleSheet(f"color: {self.theme.text_primary};")
         self.progress_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)

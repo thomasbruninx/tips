@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
-from installer_framework.config.models import StepConfig
+from installer_framework.config.models import StepConfig, ThemeConfig
 from installer_framework.engine.context import InstallerContext
 from installer_framework.ui.theme import UITheme, get_active_theme
+from installer_framework.ui.widgets.theme import ThemeWidgetFactory, build_widget_factory
 
 
 class StepWidget(QWidget):
@@ -22,7 +24,10 @@ class StepWidget(QWidget):
         self.step_config = step_config
         self.ctx = ctx
         self.wizard = wizard
-        self.theme: UITheme | None = theme
+        self.theme: UITheme = theme or UITheme(config=ThemeConfig(), source_root=Path.cwd())
+        self.widget_factory: ThemeWidgetFactory = getattr(wizard, "widget_factory", None) or build_widget_factory(
+            self.theme
+        )
 
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(8, 8, 8, 8)
@@ -30,7 +35,7 @@ class StepWidget(QWidget):
 
     def _font(self, size: int, bold: bool = False) -> QFont:
         font = QFont()
-        if self.theme and self.theme.font_name:
+        if self.theme.font_name:
             font.setFamily(self.theme.font_name)
         font.setPointSize(size)
         font.setBold(bold)
@@ -39,8 +44,8 @@ class StepWidget(QWidget):
     def title_label(self, text: str | None = None) -> QLabel:
         label = QLabel(text or self.step_config.title)
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        label.setFont(self._font(self.theme.title_size if self.theme else 14, bold=True))
-        label.setStyleSheet(f"color: {self.theme.text_primary if self.theme else '#000'};")
+        label.setFont(self._font(self.theme.title_size, bold=True))
+        label.setStyleSheet(f"color: {self.theme.text_primary};")
         label.setFixedHeight(30)
         return label
 
@@ -54,8 +59,8 @@ class StepWidget(QWidget):
         label = QLabel(resolved)
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-        label.setFont(self._font(self.theme.base_size if self.theme else 12))
-        label.setStyleSheet(f"color: {self.theme.text_primary if self.theme else '#000'};")
+        label.setFont(self._font(self.theme.base_size))
+        label.setStyleSheet(f"color: {self.theme.text_primary};")
         if not resolved.strip():
             label.setVisible(False)
             label.setFixedHeight(0)

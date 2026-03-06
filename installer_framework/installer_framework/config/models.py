@@ -188,10 +188,33 @@ def _action_from_dict(data: dict[str, Any]) -> ActionConfig:
 
 
 def _theme_from_dict(data: dict[str, Any]) -> ThemeConfig:
+    style = data.get("style", "classic")
     default_assets = ThemeAssetsConfig()
-    default_colors = ThemeColorsConfig()
-    default_metrics = ThemeMetricsConfig()
-    default_typography = ThemeTypographyConfig()
+    if style == "modern":
+        default_colors = ThemeColorsConfig(
+            window_bg="#F5F5F7",
+            panel_bg="#FFFFFF",
+            text_primary="#1D1D1F",
+            border_light="#FFFFFF",
+            border_dark="#D2D2D7",
+            accent="#0071E3",
+        )
+        default_metrics = ThemeMetricsConfig(
+            window_width=780,
+            window_height=560,
+            sidebar_width=164,
+            padding=14,
+            button_height=30,
+        )
+        default_typography = ThemeTypographyConfig(
+            font_name="SF Pro Text",
+            base_size=13,
+            title_size=17,
+        )
+    else:
+        default_colors = ThemeColorsConfig()
+        default_metrics = ThemeMetricsConfig()
+        default_typography = ThemeTypographyConfig()
 
     assets_data = data.get("assets", {})
     colors_data = data.get("colors", {})
@@ -223,7 +246,7 @@ def _theme_from_dict(data: dict[str, Any]) -> ThemeConfig:
         title_size=typography_data.get("title_size", default_typography.title_size),
     )
     return ThemeConfig(
-        style=data.get("style", "classic"),
+        style=style,
         assets=assets,
         colors=colors,
         metrics=metrics,

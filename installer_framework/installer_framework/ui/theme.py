@@ -1,4 +1,4 @@
-"""Runtime UI theme helpers for classic installer styling."""
+"""Runtime UI theme helpers for installer styling."""
 
 from __future__ import annotations
 
@@ -67,6 +67,14 @@ class UITheme:
     source_root: Path
 
     @property
+    def style(self) -> str:
+        return self.config.style
+
+    @property
+    def is_modern(self) -> bool:
+        return self.style == "modern"
+
+    @property
     def window_bg(self) -> str:
         return self.config.colors.window_bg
 
@@ -92,18 +100,26 @@ class UITheme:
 
     @property
     def sidebar_top(self) -> str:
+        if self.is_modern:
+            return tint_hex(self.accent, 0.04)
         return self.accent
 
     @property
     def sidebar_bottom(self) -> str:
+        if self.is_modern:
+            return tint_hex(self.accent, -0.12)
         return tint_hex(self.accent, 0.25)
 
     @property
     def button_face(self) -> str:
+        if self.is_modern:
+            return self.panel_bg
         return self.window_bg
 
     @property
     def button_pressed(self) -> str:
+        if self.is_modern:
+            return tint_hex(self.button_face, -0.06)
         return tint_hex(self.button_face, -0.10)
 
     @property

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QDialog, QHBoxLayout, QWidget
 
 from installer_framework.config.models import ThemeConfig
 from installer_framework.ui.theme import UITheme, get_active_theme
-from installer_framework.ui.widgets.classic import ClassicButton, ClassicDialogFrame
+from installer_framework.ui.widgets.theme import build_widget_factory
 
 _DEFAULT_THEME = UITheme(config=ThemeConfig(), source_root=Path.cwd())
 
@@ -22,16 +22,18 @@ def _theme() -> UITheme:
 
 def show_message_dialog(level: str, title: str, message: str) -> None:
     theme = _theme()
+    widget_factory = build_widget_factory(theme)
     dialog = QDialog()
     dialog.setWindowTitle(title)
     dialog.setModal(True)
-    dialog.resize(460, 220)
-    dialog.setObjectName("ClassicDialog")
-    dialog.setStyleSheet(f"QDialog#ClassicDialog {{ background-color: {theme.window_bg}; }}")
+    width, height = widget_factory.message_dialog_size()
+    dialog.resize(width, height)
+    dialog.setObjectName("ThemeDialog")
+    dialog.setStyleSheet(f"QDialog#ThemeDialog {{ background-color: {theme.window_bg}; }}")
 
-    frame = ClassicDialogFrame(theme=theme, title=title, message=message)
+    frame = widget_factory.create_dialog_frame(title=title, message=message)
     frame.buttons_layout.addStretch(1)
-    ok_btn = ClassicButton(theme=theme, text="OK", default_action=True)
+    ok_btn = widget_factory.create_button("OK", default_action=True)
     ok_btn.setFixedWidth(88)
     ok_btn.clicked.connect(dialog.accept)
     frame.buttons_layout.addWidget(ok_btn)
@@ -42,7 +44,7 @@ def show_message_dialog(level: str, title: str, message: str) -> None:
         frame.title_label.setStyleSheet("color: #8B5A00;")
 
     root = QHBoxLayout(dialog)
-    root.setContentsMargins(0, 0, 0, 0)
+    root.setContentsMargins(*widget_factory.dialog_margins())
     root.addWidget(frame)
     dialog.exec()
 
@@ -50,18 +52,20 @@ def show_message_dialog(level: str, title: str, message: str) -> None:
 
 def show_confirm_dialog(title: str, message: str, callback: Callable[[bool], None]) -> None:
     theme = _theme()
+    widget_factory = build_widget_factory(theme)
     dialog = QDialog()
     dialog.setWindowTitle(title)
     dialog.setModal(True)
-    dialog.resize(470, 220)
-    dialog.setObjectName("ClassicDialog")
-    dialog.setStyleSheet(f"QDialog#ClassicDialog {{ background-color: {theme.window_bg}; }}")
+    width, height = widget_factory.confirm_dialog_size()
+    dialog.resize(width, height)
+    dialog.setObjectName("ThemeDialog")
+    dialog.setStyleSheet(f"QDialog#ThemeDialog {{ background-color: {theme.window_bg}; }}")
 
-    frame = ClassicDialogFrame(theme=theme, title=title, message=message)
+    frame = widget_factory.create_dialog_frame(title=title, message=message)
     frame.buttons_layout.addStretch(1)
-    yes_btn = ClassicButton(theme=theme, text="Yes", default_action=True)
+    yes_btn = widget_factory.create_button("Yes", default_action=True)
     yes_btn.setFixedWidth(88)
-    no_btn = ClassicButton(theme=theme, text="No")
+    no_btn = widget_factory.create_button("No")
     no_btn.setFixedWidth(88)
 
     yes_btn.clicked.connect(lambda: (callback(True), dialog.accept()))
@@ -71,6 +75,6 @@ def show_confirm_dialog(title: str, message: str, callback: Callable[[bool], Non
     frame.buttons_layout.addWidget(no_btn)
 
     root = QHBoxLayout(dialog)
-    root.setContentsMargins(0, 0, 0, 0)
+    root.setContentsMargins(*widget_factory.dialog_margins())
     root.addWidget(frame)
     dialog.exec()

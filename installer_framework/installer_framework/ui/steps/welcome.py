@@ -5,13 +5,12 @@ from __future__ import annotations
 from PyQt6.QtWidgets import QRadioButton
 
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicGroupBox
 
 
 class WelcomeStep(StepWidget):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.upgrade_group = ClassicGroupBox(theme=self.theme, title="Upgrade options")
+        self.upgrade_group = self.widget_factory.create_group_box(title="Upgrade options")
         self.upgrade_group.setVisible(False)
 
         self.radio_in_place = QRadioButton("Upgrade in place")

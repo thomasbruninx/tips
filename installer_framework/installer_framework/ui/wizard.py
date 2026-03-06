@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
@@ -13,25 +14,21 @@ from installer_framework.engine.context import InstallerContext
 from installer_framework.engine.runner import ActionResult
 from installer_framework.ui.step_factory import StepFactory
 from installer_framework.ui.theme import UITheme, get_active_theme
-from installer_framework.ui.widgets.classic import (
-    ClassicButton,
-    ClassicHeader,
-    ClassicPanel,
-    ClassicSeparator,
-    ClassicSidebar,
-)
+from installer_framework.ui.widgets.theme import build_shell_styler, build_widget_factory
 from installer_framework.ui.widgets.dialogs import show_confirm_dialog, show_message_dialog
 from installer_framework.util.privileges import relaunch_as_admin_windows, relaunch_with_sudo_unix
 
 
 class Wizard(QMainWindow):
-    """Top-level wizard window with classic branding, content, and navigation."""
+    """Top-level wizard window with themed branding, content, and navigation."""
 
     def __init__(self, config: InstallerConfig, ctx: InstallerContext, **kwargs) -> None:
         super().__init__(**kwargs)
         self.config = config
         self.ctx = ctx
         self.theme: UITheme = get_active_theme() or UITheme(config=config.theme, source_root=config.source_root)
+        self.widget_factory = build_widget_factory(self.theme)
+        self.shell_styler = build_shell_styler(self.theme)
         self.step_cache: dict[str, QWidget] = {}
         self.visible_steps: list[StepConfig] = []
         self.current_index = 0
@@ -44,39 +41,38 @@ class Wizard(QMainWindow):
         metrics = self.theme.config.metrics
 
         central = QWidget()
+        central.setObjectName("WizardRoot")
         self.setCentralWidget(central)
         root = QHBoxLayout(central)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
+        root.setContentsMargins(*self.shell_styler.root_margins())
+        root.setSpacing(self.shell_styler.main_layout_spacing())
 
-        sidebar_source = self.theme.sidebar_image
-        sidebar_path = str(sidebar_source) if sidebar_source else None
-        self.sidebar = ClassicSidebar(
-            theme=self.theme,
-            title=self.config.branding.product_name,
-            subtitle=f"Version {self.config.branding.version}\n{self.config.branding.publisher}",
-            image_path=sidebar_path,
-        )
-        self.sidebar.setFixedWidth(metrics.sidebar_width)
+        self.sidebar: QWidget | None = None
+        if self.shell_styler.show_sidebar():
+            sidebar_source = self.theme.sidebar_image
+            sidebar_path = str(sidebar_source) if sidebar_source else None
+            self.sidebar = self.widget_factory.create_sidebar(
+                title=self.config.branding.product_name,
+                subtitle=f"Version {self.config.branding.version}\n{self.config.branding.publisher}",
+                image_path=sidebar_path,
+            )
+            self.sidebar.setFixedWidth(metrics.sidebar_width)
+            root.addWidget(self.sidebar)
 
         self.main_column = QWidget()
         main_layout = QVBoxLayout(self.main_column)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        self.shell_styler.configure_main_column_layout(main_layout)
 
         self.header_host = QWidget()
         self.header_layout = QVBoxLayout(self.header_host)
         self.header_layout.setContentsMargins(0, 0, 0, 0)
         self.header_layout.setSpacing(0)
-        self.header_host.setFixedHeight(82)
+        self.header_host.setFixedHeight(self.shell_styler.header_height())
 
-        self.content_panel = ClassicPanel(theme=self.theme)
-        self.content_panel.setObjectName("WizardContentPanel")
-        self.content_panel.setStyleSheet(
-            f"QFrame#WizardContentPanel {{ background-color: {self.theme.content_bg}; border: 1px solid {self.theme.border_dark}; }}"
-        )
+        self.content_panel = self.widget_factory.create_panel()
+        self.shell_styler.style_content_panel(self.content_panel)
         content_layout = QVBoxLayout(self.content_panel)
-        content_layout.setContentsMargins(metrics.padding, metrics.padding, metrics.padding, metrics.padding)
+        content_layout.setContentsMargins(*self.shell_styler.content_margins())
         content_layout.setSpacing(8)
         self.content = QWidget()
         self.content_layout = QVBoxLayout(self.content)
@@ -85,14 +81,15 @@ class Wizard(QMainWindow):
         content_layout.addWidget(self.content)
 
         self.nav_widget = QWidget()
+        self.shell_styler.style_nav_widget(self.nav_widget)
         nav_layout = QHBoxLayout(self.nav_widget)
-        nav_layout.setContentsMargins(10, 8, 10, 8)
+        nav_layout.setContentsMargins(*self.shell_styler.nav_margins())
         nav_layout.setSpacing(6)
 
-        self.back_btn = ClassicButton(theme=self.theme, text="< Back")
-        self.next_btn = ClassicButton(theme=self.theme, text="Next >", default_action=True)
-        self.install_btn = ClassicButton(theme=self.theme, text="Install", default_action=True)
-        self.cancel_btn = ClassicButton(theme=self.theme, text="Cancel")
+        self.back_btn = self.widget_factory.create_button("< Back")
+        self.next_btn = self.widget_factory.create_button("Next >", default_action=True)
+        self.install_btn = self.widget_factory.create_button("Install", default_action=True)
+        self.cancel_btn = self.widget_factory.create_button("Cancel")
 
         btn_width = 95
         for btn in (self.back_btn, self.next_btn, self.install_btn, self.cancel_btn):
@@ -112,13 +109,25 @@ class Wizard(QMainWindow):
 
         main_layout.addWidget(self.header_host)
         main_layout.addWidget(self.content_panel, 1)
-        main_layout.addWidget(ClassicSeparator(theme=self.theme))
+        if self.shell_styler.include_separator():
+            main_layout.addWidget(self.widget_factory.create_separator())
         main_layout.addWidget(self.nav_widget)
 
-        root.addWidget(self.sidebar)
         root.addWidget(self.main_column, 1)
 
-        self.setStyleSheet(f"QMainWindow {{ background-color: {self.theme.window_bg}; }}")
+        self.shell_styler.apply_window_style(self)
+        self.shell_styler.apply_global_control_style(central)
+
+    def _resolve_branding_logo(self) -> Path | None:
+        logo = self.config.branding.logo_path
+        if not logo:
+            return None
+        path = Path(logo)
+        if not path.is_absolute():
+            path = (self.config.source_root / logo).resolve()
+        if path.exists():
+            return path
+        return None
 
     def refresh_visible_steps(self) -> None:
         visible: list[StepConfig] = []
@@ -144,13 +153,16 @@ class Wizard(QMainWindow):
 
     def _set_header(self, step_cfg: StepConfig) -> None:
         self._clear_layout(self.header_layout)
-        header_image = self.theme.header_image
+        header_image = self.shell_styler.resolve_header_image(
+            branding_logo=self._resolve_branding_logo(),
+            theme_header=self.theme.header_image,
+            theme_sidebar=self.theme.sidebar_image,
+        )
         if step_cfg.header_description is not None:
             header_description = step_cfg.header_description
         else:
             header_description = step_cfg.description or f"Setup for {self.config.branding.product_name}"
-        header = ClassicHeader(
-            theme=self.theme,
+        header = self.widget_factory.create_header(
             title=step_cfg.title,
             description=header_description,
             image_path=str(header_image) if header_image else None,

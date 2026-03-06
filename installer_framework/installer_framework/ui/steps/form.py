@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import QCheckBox, QComboBox, QLabel
 from installer_framework.config.conditions import evaluate_condition
 from installer_framework.config.validation import validate_field_value
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicCheckboxRow, ClassicGroupBox
 from installer_framework.ui.widgets.validated_text_input import ValidatedTextInput
 
 
@@ -18,7 +17,7 @@ class FormStep(StepWidget):
         super().__init__(*args, **kwargs)
         self.controls: dict[str, Any] = {}
 
-        group = ClassicGroupBox(theme=self.theme, title=self.step_config.title)
+        group = self.widget_factory.create_group_box(title=self.step_config.title)
         group.content_layout.addWidget(self.description_label(height=40))
 
         for field in self.step_config.fields:
@@ -30,7 +29,7 @@ class FormStep(StepWidget):
                 self.controls[field.id] = control
                 group.content_layout.addWidget(control)
             elif field.type == "checkbox":
-                row = ClassicCheckboxRow(theme=self.theme, text=field.label, active=bool(field.default))
+                row = self.widget_factory.create_checkbox_row(text=field.label, active=bool(field.default))
                 self.controls[field.id] = row.checkbox
                 group.content_layout.addWidget(row)
             elif field.type == "select":

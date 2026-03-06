@@ -1,0 +1,238 @@
+{
+  "product_id": "tips-demo-app",
+  "install_scope": "ask",
+  "branding": {
+    "productName": "TIPS Demo App",
+    "publisher": "TIPS",
+    "version": "1.0.0",
+    "logoPath": "assets/logo.png",
+    "windowIconPath": "assets/logo.png"
+  },
+  "theme": {
+    "style": "modern",
+    "assets": {
+      "sidebar_image_path": "assets/logo.png",
+      "header_image_path": "assets/logo.png"
+    },
+    "colors": {
+      "window_bg": "#F5F5F7",
+      "panel_bg": "#FFFFFF",
+      "text_primary": "#1D1D1F",
+      "border_light": "#FFFFFF",
+      "border_dark": "#D2D2D7",
+      "accent": "#0071E3"
+    },
+    "metrics": {
+      "window_width": 780,
+      "window_height": 560,
+      "sidebar_width": 164,
+      "padding": 14,
+      "button_height": 30
+    },
+    "typography": {
+      "font_name": "SF Pro Text",
+      "base_size": 13,
+      "title_size": 17
+    }
+  },
+  "windows": {
+    "allow_uac_elevation": false,
+    "prefer_program_files_x86": false,
+    "installer_icon_ico": "assets/appicon.ico"
+  },
+  "macos": {
+    "installer_icon_icns": "assets/appicon.icns"
+  },
+  "unix": {
+    "allow_sudo_relaunch": false
+  },
+  "upgrade": {
+    "enabled": true,
+    "store_file": "install-info.json"
+  },
+  "features": [
+    {
+      "id": "core",
+      "label": "Core files",
+      "description": "Required runtime files",
+      "default": true
+    },
+    {
+      "id": "docs",
+      "label": "Offline documentation",
+      "description": "Installs local docs",
+      "default": true
+    },
+    {
+      "id": "desktop_shortcut",
+      "label": "Desktop shortcut",
+      "description": "Creates a desktop launcher",
+      "default": true
+    }
+  ],
+  "steps": [
+    {
+      "id": "welcome",
+      "type": "welcome",
+      "title": "Welcome to TIPS Demo Setup",
+      "description": "This wizard will install TIPS Demo App on your computer.",
+      "header_description": "Setup Wizard for TIPS Demo App.",
+      "body_description": "This setup will guide you through the installation. Click Next to continue."
+    },
+    {
+      "id": "license",
+      "type": "license",
+      "title": "License Agreement",
+      "description": "Please review the license and accept to continue.",
+      "license_path": "assets/license.txt"
+    },
+    {
+      "id": "scope",
+      "type": "scope",
+      "title": "Install Scope",
+      "description": "Choose whether to install for this user or all users.",
+      "body_description": "Choose who can use this installation on this machine."
+    },
+    {
+      "id": "directory",
+      "type": "directory",
+      "title": "Installation Directory",
+      "description": "Select where the application should be installed.",
+      "body_description": "Choose the target folder where application files will be copied.",
+      "fields": [
+        {
+          "id": "install_dir",
+          "type": "directory",
+          "label": "Install Directory",
+          "required": true,
+          "validators": ["dir_exists_or_create", "path_writable"]
+        }
+      ]
+    },
+    {
+      "id": "options",
+      "type": "options",
+      "title": "Feature Selection",
+      "description": "Select optional components.",
+      "body_description": "Select the optional components and defaults to install.",
+      "fields": [
+        {
+          "id": "create_desktop_shortcut",
+          "type": "checkbox",
+          "label": "Create desktop shortcut",
+          "default": true
+        },
+        {
+          "id": "install_channel",
+          "type": "select",
+          "label": "Install channel",
+          "choices": ["stable", "beta"],
+          "default": "stable"
+        },
+        {
+          "id": "selected_features",
+          "type": "multiselect",
+          "label": "Features"
+        }
+      ]
+    },
+    {
+      "id": "credentials",
+      "type": "form",
+      "title": "Account Setup",
+      "description": "Provide initial account details.",
+      "body_description": "Enter initial account credentials for the application.",
+      "fields": [
+        {
+          "id": "username",
+          "type": "text",
+          "label": "Username",
+          "required": true,
+          "regex": "^[a-zA-Z0-9_.-]{3,20}$",
+          "min_length": 3,
+          "max_length": 20
+        },
+        {
+          "id": "password",
+          "type": "password",
+          "label": "Password",
+          "required": true,
+          "min_length": 8,
+          "complexity": true
+        }
+      ]
+    },
+    {
+      "id": "ready",
+      "type": "ready",
+      "title": "Ready to Install",
+      "description": "Review your choices and click Install."
+    },
+    {
+      "id": "install",
+      "type": "install",
+      "title": "Installing",
+      "description": "Applying changes"
+    },
+    {
+      "id": "finish",
+      "type": "finish",
+      "title": "Setup Complete",
+      "description": "Installation finished"
+    }
+  ],
+  "actions": [
+    {
+      "type": "copy_files",
+      "items": [
+        {
+          "from": "assets/payload",
+          "to": "."
+        }
+      ],
+      "overwrite": true
+    },
+    {
+      "type": "create_shortcut",
+      "name": "TIPS Demo App",
+      "target_relative": "README.txt",
+      "desktop": true,
+      "start_menu": true
+    },
+    {
+      "type": "create_desktop_entry",
+      "id": "tips-demo-app",
+      "name": "TIPS Demo App",
+      "exec_relative": "README.txt",
+      "icon": ""
+    },
+    {
+      "type": "write_dotfile",
+      "file_name": "install-info.json"
+    },
+    {
+      "type": "write_registry",
+      "key_path": "Software\\TIPS\\tips-demo-app",
+      "value_name": "Version",
+      "value": "{version}"
+    },
+    {
+      "type": "write_registry",
+      "key_path": "Software\\TIPS\\tips-demo-app",
+      "value_name": "InstallDir",
+      "value": "{install_dir}"
+    },
+    {
+      "type": "write_registry",
+      "key_path": "Software\\TIPS\\tips-demo-app",
+      "value_name": "Scope",
+      "value": "{scope}"
+    },
+    {
+      "type": "show_message",
+      "level": "info",
+      "title": "Install Complete",
+      "message": "Installed to {install_dir} ({scope} scope)."
+    }
+  ]
+}

@@ -2,12 +2,15 @@
 
 TIPS = **TIPS Instructable Python Setup**.
 
-This project provides a JSON-driven, **PyQt6**-based installer framework for Windows, Linux, and macOS. It supports a classic installer wizard UI, validation, install scope (`user`/`system`/`ask`), background action execution with progress/logging, and upgrade detection.
+This project provides a JSON-driven, **PyQt6**-based installer framework for Windows, Linux, and macOS. It supports classic and modern installer wizard UI themes, validation, install scope (`user`/`system`/`ask`), background action execution with progress/logging, and upgrade detection.
 
 ## Features
 
-- Classic installer shell UI (InstallShield-like):
-  - left branding/sidebar panel
+- Installer shell UI themes:
+  - `classic`
+  - `modern` (macOS Installer-like)
+  - left branding/sidebar panel (classic)
+  - top header + flat content shell (modern)
   - step header area
   - content area for step widgets
   - navigation bar (`< Back`, `Next >`, `Install`, `Finish`, `Cancel`)
@@ -16,7 +19,7 @@ This project provides a JSON-driven, **PyQt6**-based installer framework for Win
   - optional conditions (`show_if`)
   - field definitions and validations
   - install actions
-- Theme block (`theme.style = "classic"`) with colors, metrics, typography, and artwork paths
+- Theme block (`theme.style = "classic"` or `"modern"`) with colors, metrics, typography, and artwork paths
 - Install scopes:
   - `user`
   - `system`
@@ -72,7 +75,9 @@ installer_framework/
         install.py
         finish.py
       widgets/
-        classic.py
+        theme.py
+        classic_theme.py
+        modern_theme.py
         dialogs.py
         validated_text_input.py
         feature_list.py
@@ -160,7 +165,20 @@ Build scripts resolve these paths relative to the JSON config file directory.
 
 ### Theme
 
-`theme` is optional; defaults are applied if omitted.
+`theme` is optional; defaults are applied if omitted. Available styles are `classic` and `modern`.
+Theme widget implementations live in:
+- `installer_framework/ui/widgets/theme.py` (abstractions + factory selection)
+- `installer_framework/ui/widgets/classic_theme.py`
+- `installer_framework/ui/widgets/modern_theme.py`
+
+Modern theme behavior:
+- Uses a macOS Installer-inspired shell (no left sidebar).
+- Keeps wizard labels unchanged (`< Back`, `Next >`, `Install`, `Finish`, `Cancel`).
+- Header artwork resolution order:
+  1. `branding.logoPath`
+  2. `theme.assets.header_image_path`
+  3. `theme.assets.sidebar_image_path`
+  4. text-only header fallback
 
 ```json
 "theme": {

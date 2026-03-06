@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QWidget
 from installer_framework.app.paths import default_install_dir
 from installer_framework.config.validation import validate_field_value
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicButton, ClassicGroupBox
 from installer_framework.util.fs import ensure_dir, is_writable
 
 
@@ -25,7 +24,7 @@ class DirectoryStep(StepWidget):
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(8)
-        browse = ClassicButton(theme=self.theme, text="Browse...")
+        browse = self.widget_factory.create_button("Browse...")
         browse.setFixedWidth(110)
         browse.clicked.connect(self.open_picker)
         row_layout.addWidget(self.path_input, 1)
@@ -34,7 +33,7 @@ class DirectoryStep(StepWidget):
         self.error = QLabel("")
         self.error.setStyleSheet("color: #B00020;")
 
-        group = ClassicGroupBox(theme=self.theme, title="Installation Directory")
+        group = self.widget_factory.create_group_box(title="Installation Directory")
         group.content_layout.addWidget(self.description_label(height=40))
         group.content_layout.addWidget(row)
         group.content_layout.addWidget(self.error)

@@ -22,7 +22,7 @@
     "theme": {
       "type": "object",
       "properties": {
-        "style": {"type": "string", "enum": ["classic"]},
+        "style": {"type": "string", "enum": ["classic", "modern"]},
         "assets": {
           "type": "object",
           "properties": {

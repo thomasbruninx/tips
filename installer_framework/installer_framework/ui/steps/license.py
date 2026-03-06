@@ -7,13 +7,12 @@ from pathlib import Path
 from PyQt6.QtWidgets import QPlainTextEdit
 
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicCheckboxRow, ClassicGroupBox
 
 
 class LicenseStep(StepWidget):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.agree_row = ClassicCheckboxRow(theme=self.theme, text="I agree to the license terms", active=False)
+        self.agree_row = self.widget_factory.create_checkbox_row(text="I agree to the license terms", active=False)
 
         license_text = self._load_license_text()
         self.license_view = QPlainTextEdit(license_text)
@@ -22,7 +21,7 @@ class LicenseStep(StepWidget):
             f"QPlainTextEdit {{ background-color: {self.theme.panel_bg}; color: {self.theme.text_primary}; border: 1px solid {self.theme.border_dark}; }}"
         )
 
-        group = ClassicGroupBox(theme=self.theme, title="License Agreement")
+        group = self.widget_factory.create_group_box(title="License Agreement")
         group.content_layout.addWidget(self.license_view, 1)
 
         self.main_layout.addWidget(group, 1)

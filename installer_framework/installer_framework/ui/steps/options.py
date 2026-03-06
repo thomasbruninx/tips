@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import QCheckBox, QComboBox, QLabel
 from installer_framework.config.conditions import evaluate_condition
 from installer_framework.config.validation import validate_field_value
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicCheckboxRow, ClassicGroupBox
 from installer_framework.ui.widgets.feature_list import FeatureListWidget
 
 
@@ -19,14 +18,14 @@ class OptionsStep(StepWidget):
         self.controls: dict[str, Any] = {}
         self.feature_list: FeatureListWidget | None = None
 
-        group = ClassicGroupBox(theme=self.theme, title="Options")
+        group = self.widget_factory.create_group_box(title="Options")
         group.content_layout.addWidget(self.description_label(height=40))
 
         for field in self.step_config.fields:
             if not evaluate_condition(field.show_if, self.ctx.state):
                 continue
             if field.type == "checkbox":
-                row = ClassicCheckboxRow(theme=self.theme, text=field.label, active=bool(field.default))
+                row = self.widget_factory.create_checkbox_row(text=field.label, active=bool(field.default))
                 self.controls[field.id] = row.checkbox
                 group.content_layout.addWidget(row)
             elif field.type == "select":

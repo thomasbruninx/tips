@@ -5,7 +5,6 @@ from __future__ import annotations
 from PyQt6.QtWidgets import QRadioButton
 
 from installer_framework.ui.step_base import StepWidget
-from installer_framework.ui.widgets.classic import ClassicGroupBox
 
 
 class ScopeStep(StepWidget):
@@ -18,7 +17,7 @@ class ScopeStep(StepWidget):
         self.user_radio.setStyleSheet(f"QRadioButton {{ color: {self.theme.text_primary}; }}")
         self.system_radio.setStyleSheet(f"QRadioButton {{ color: {self.theme.text_primary}; }}")
 
-        group = ClassicGroupBox(theme=self.theme, title="Install Scope")
+        group = self.widget_factory.create_group_box(title="Install Scope")
         group.content_layout.addWidget(self.description_label(height=40))
         group.content_layout.addWidget(self.user_radio)
         group.content_layout.addWidget(self.system_radio)
