@@ -232,7 +232,21 @@ class ClassicDialogFrame(QWidget):
     def __init__(self, theme: UITheme, title: str, message: str, **kwargs) -> None:
         super().__init__(**kwargs)
         self.theme = theme
-        self.setStyleSheet(f"background-color: {theme.window_bg};")
+        self.setObjectName("ClassicDialogFrame")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet(
+            f"""
+            QWidget#ClassicDialogFrame {{
+                background-color: {theme.window_bg};
+            }}
+            QLabel {{
+                background: transparent;
+            }}
+            QWidget#DialogButtonsRow {{
+                background: transparent;
+            }}
+            """
+        )
 
         root = QVBoxLayout(self)
         root.setContentsMargins(12, 12, 12, 12)
@@ -248,6 +262,7 @@ class ClassicDialogFrame(QWidget):
         self.message_label.setWordWrap(True)
 
         self.buttons = QWidget()
+        self.buttons.setObjectName("DialogButtonsRow")
         self.buttons_layout = QHBoxLayout(self.buttons)
         self.buttons_layout.setContentsMargins(0, 0, 0, 0)
         self.buttons_layout.setSpacing(8)

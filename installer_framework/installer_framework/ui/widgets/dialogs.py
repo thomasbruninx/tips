@@ -26,6 +26,8 @@ def show_message_dialog(level: str, title: str, message: str) -> None:
     dialog.setWindowTitle(title)
     dialog.setModal(True)
     dialog.resize(460, 220)
+    dialog.setObjectName("ClassicDialog")
+    dialog.setStyleSheet(f"QDialog#ClassicDialog {{ background-color: {theme.window_bg}; }}")
 
     frame = ClassicDialogFrame(theme=theme, title=title, message=message)
     frame.buttons_layout.addStretch(1)
@@ -52,6 +54,8 @@ def show_confirm_dialog(title: str, message: str, callback: Callable[[bool], Non
     dialog.setWindowTitle(title)
     dialog.setModal(True)
     dialog.resize(470, 220)
+    dialog.setObjectName("ClassicDialog")
+    dialog.setStyleSheet(f"QDialog#ClassicDialog {{ background-color: {theme.window_bg}; }}")
 
     frame = ClassicDialogFrame(theme=theme, title=title, message=message)
     frame.buttons_layout.addStretch(1)
