@@ -653,6 +653,8 @@ On install failure/cancel:
 
 ### Windows uninstaller (GUI)
 
+The Windows uninstaller executable is installed into the application install directory for ARP integration and discoverability. When launched, it transparently copies itself to a temporary directory, relaunches from there, removes the installed `tips-uninstaller.exe`, and then schedules deletion of the temp copy after exit. This is required because a running Windows executable cannot delete itself in place.
+
 ```powershell
 tips-uninstaller --manifest "C:\\Path\\To\\Install\\.tips\\manifest.json"
 ```

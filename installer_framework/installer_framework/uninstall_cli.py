@@ -63,8 +63,15 @@ def run_uninstall(
     options: UninstallOptions,
     *,
     interactive_prompt: bool,
+    running_executable: Path | None = None,
+    original_uninstaller_path: Path | None = None,
 ) -> UninstallResult:
-    runner = UninstallRunner(manifest_file=manifest_file, options=options)
+    runner = UninstallRunner(
+        manifest_file=manifest_file,
+        options=options,
+        running_executable=running_executable,
+        original_uninstaller_path=original_uninstaller_path,
+    )
     prompt_cb = _prompt_modified if interactive_prompt else None
     return runner.run(
         progress_callback=lambda value, message: print(f"[{value:03d}%] {message}"),

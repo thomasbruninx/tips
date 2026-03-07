@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from installer_framework.engine.manifest import WINDOWS_UNINSTALLER_NAME
 from installer_framework.engine.rollback import InstallTransaction
 from tests.helpers.context_factory import default_env, make_context
 from tests.helpers.fake_winreg import FakeWinReg
@@ -69,4 +70,4 @@ def test_transaction_finalize_success_windows_registers_arp(monkeypatch, tmp_pat
     manifest = tx.finalize_success([])
 
     assert manifest.exists()
-    assert (Path(ctx.state.install_dir) / ".tips" / "tips-uninstaller.exe").exists()
+    assert (Path(ctx.state.install_dir) / WINDOWS_UNINSTALLER_NAME).exists()

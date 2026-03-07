@@ -62,9 +62,10 @@ def test_run_uninstall_disables_prompt_callback_when_not_interactive(monkeypatch
     captured: dict[str, object] = {}
 
     class _Runner:
-        def __init__(self, manifest_file, options):
+        def __init__(self, manifest_file, options, **kwargs):
             captured["manifest"] = manifest_file
             captured["options"] = options
+            captured["kwargs"] = kwargs
 
         def run(self, progress_callback, log_callback, prompt_callback=None):
             captured["prompt_callback"] = prompt_callback

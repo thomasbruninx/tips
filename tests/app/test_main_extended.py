@@ -62,6 +62,7 @@ def test_main_wires_bootstrap(monkeypatch, tmp_path):
 def test_main_module_guard(monkeypatch, tmp_path):
     sample_cfg = Path(__file__).resolve().parents[2] / "installer_framework" / "examples" / "sample_installer.json"
     monkeypatch.setattr("sys.argv", ["prog", "--config", str(sample_cfg)])
+    monkeypatch.delitem(sys.modules, "installer_framework.main", raising=False)
 
     fake_qt_module = ModuleType("installer_framework.app.qt_app")
     fake_qt_module.InstallerQtApp = type(  # type: ignore[attr-defined]

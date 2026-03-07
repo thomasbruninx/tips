@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -21,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from installer_framework.engine.manifest import load_json
 from installer_framework.engine.uninstall_runner import UninstallOptions, UninstallResult, UninstallRunner
+from installer_framework.uninstaller_main import schedule_windows_temp_self_cleanup
 
 
 class UninstallWizard(QMainWindow):
@@ -32,10 +35,16 @@ class UninstallWizard(QMainWindow):
         *,
         delete_modified: bool = False,
         modified_file_policy: str = "prompt",
+        original_uninstaller_path: Path | None = None,
+        temp_cleanup_dir: Path | None = None,
     ) -> None:
         super().__init__()
         self.manifest_file = manifest_file
         self.modified_file_policy = modified_file_policy
+        self.original_uninstaller_path = original_uninstaller_path
+        self.temp_cleanup_dir = temp_cleanup_dir
+        self._cleanup_scheduled = False
+        self._uninstall_finished = False
 
         payload = load_json(manifest_file, default={})
         self.product_name = str(payload.get("product_name") or "Application")
@@ -93,6 +102,10 @@ class UninstallWizard(QMainWindow):
 
         self._append_log(f"Manifest: {self.manifest_file}")
         self._append_log(f"Install directory: {self.install_dir}")
+        if self.temp_cleanup_dir and self.original_uninstaller_path:
+            self._append_log(
+                "Windows temp handoff active: relaunched from a temporary copy so the installed uninstaller can be removed."
+            )
 
     def _append_log(self, message: str) -> None:
         self.log_view.appendPlainText(message)
@@ -148,8 +161,13 @@ class UninstallWizard(QMainWindow):
             delete_modified=self.delete_modified_checkbox.isChecked(),
             modified_file_policy=self.modified_file_policy,
         )
-        runner = UninstallRunner(self.manifest_file, options=options)
         prompt_cb = self._prompt_modified if self.modified_file_policy == "prompt" else None
+        runner = UninstallRunner(
+            self.manifest_file,
+            options=options,
+            running_executable=Path(sys.argv[0]).resolve(),
+            original_uninstaller_path=self.original_uninstaller_path,
+        )
 
         result = runner.run(
             progress_callback=self._set_progress,
@@ -161,8 +179,18 @@ class UninstallWizard(QMainWindow):
             for error in result.errors:
                 self._append_log(f"ERROR: {error}")
 
+        self._uninstall_finished = True
         self._finish(result)
 
     @property
     def result(self) -> UninstallResult | None:
         return self._result
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        if self.temp_cleanup_dir and self._uninstall_finished and not self._cleanup_scheduled:
+            try:
+                schedule_windows_temp_self_cleanup(Path(sys.argv[0]).resolve(), self.temp_cleanup_dir)
+                self._cleanup_scheduled = True
+            except Exception:
+                pass
+        super().closeEvent(event)

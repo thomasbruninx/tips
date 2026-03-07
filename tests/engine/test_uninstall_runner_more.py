@@ -315,3 +315,35 @@ def test_uninstall_runner_run_record_error_and_launcher_cleanup_branches(monkeyp
     result2 = runner2.run(lambda *_: None, lambda *_: None)
     assert result2.success is True
     assert str(bad_win_dir) in result2.skipped
+
+
+def test_uninstall_runner_removes_original_windows_uninstaller_from_temp_process(tmp_path):
+    install_dir = tmp_path / "install"
+    meta_dir = install_dir / ".tips"
+    meta_dir.mkdir(parents=True, exist_ok=True)
+    installed_uninstaller = install_dir / "tips-uninstaller.exe"
+    installed_uninstaller.write_text("exe", encoding="utf-8")
+    temp_uninstaller = tmp_path / "temp" / "tips-uninstaller.exe"
+    temp_uninstaller.parent.mkdir(parents=True, exist_ok=True)
+    temp_uninstaller.write_text("temp", encoding="utf-8")
+
+    manifest = _write_manifest(
+        meta_dir / "manifest.json",
+        {
+            "install_dir": str(install_dir),
+            "artifacts": [],
+            "uninstall": {"windows_uninstaller_path": str(installed_uninstaller)},
+        },
+    )
+
+    runner = UninstallRunner(
+        manifest,
+        options=UninstallOptions(silent=True, modified_file_policy="skip"),
+        running_executable=temp_uninstaller,
+        original_uninstaller_path=installed_uninstaller,
+    )
+    result = runner.run(lambda *_: None, lambda *_: None)
+
+    assert result.success is True
+    assert installed_uninstaller.exists() is False
+    assert install_dir.exists() is False

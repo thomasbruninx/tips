@@ -7,9 +7,10 @@ from installer_framework.ui.uninstall_wizard import UninstallWizard
 
 
 class FakeRunner:
-    def __init__(self, manifest_file, options):
+    def __init__(self, manifest_file, options, **kwargs):
         self.manifest_file = manifest_file
         self.options = options
+        self.kwargs = kwargs
 
     def run(self, progress_callback, log_callback, prompt_callback=None):
         progress_callback(100, "done")

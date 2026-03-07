@@ -37,10 +37,21 @@ class UninstallAborted(RuntimeError):
 
 
 class UninstallRunner:
-    def __init__(self, manifest_file: Path, options: UninstallOptions) -> None:
+    def __init__(
+        self,
+        manifest_file: Path,
+        options: UninstallOptions,
+        *,
+        running_executable: Path | None = None,
+        original_uninstaller_path: Path | None = None,
+    ) -> None:
         self.manifest_file = manifest_file
         self.options = options
         self.payload = load_json(manifest_file, default={})
+        self.running_executable = (running_executable or Path(sys.argv[0])).expanduser().resolve()
+        self.original_uninstaller_path = (
+            original_uninstaller_path.expanduser().resolve() if original_uninstaller_path else None
+        )
 
     def _handle_modified(self, path: Path, operation: str, prompt_callback: PromptCallback | None, log: LogCallback) -> str:
         if self.options.delete_modified:
@@ -243,7 +254,7 @@ class UninstallRunner:
                     continue
                 path = Path(value)
                 try:
-                    if path.resolve() == Path(sys.argv[0]).resolve():
+                    if path.resolve() == self.running_executable:
                         log_callback(f"Skipping removal of currently running launcher: {path}")
                         continue
                 except Exception:
@@ -256,10 +267,11 @@ class UninstallRunner:
             if win_uninstaller:
                 win_path = Path(win_uninstaller)
                 try:
-                    if win_path.resolve() != Path(sys.argv[0]).resolve():
+                    if win_path.resolve() != self.running_executable:
                         win_path.unlink(missing_ok=True)
                         removed.append(str(win_path))
                     else:
+                        log_callback(f"Skipping removal of currently running Windows uninstaller: {win_path}")
                         skipped.append(str(win_path))
                 except Exception:
                     skipped.append(str(win_path))

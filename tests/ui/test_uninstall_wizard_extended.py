@@ -96,10 +96,22 @@ def test_uninstall_wizard_finish_states(qtbot, tmp_path):
     assert "errors" in wizard.message_label.text().lower()
 
 
+def test_uninstall_wizard_logs_windows_temp_handoff(qtbot, tmp_path):
+    wizard = UninstallWizard(
+        _manifest(tmp_path),
+        original_uninstaller_path=tmp_path / "install" / "tips-uninstaller.exe",
+        temp_cleanup_dir=tmp_path / "temp",
+    )
+    qtbot.addWidget(wizard)
+
+    assert "Windows temp handoff active" in wizard.log_view.toPlainText()
+
+
 def test_uninstall_wizard_start_uninstall_with_errors(qtbot, tmp_path, monkeypatch):
     class _Runner:
-        def __init__(self, _manifest_file, options):
+        def __init__(self, _manifest_file, options, **kwargs):
             self.options = options
+            self.kwargs = kwargs
 
         def run(self, progress_callback, log_callback, prompt_callback=None):
             assert prompt_callback is not None

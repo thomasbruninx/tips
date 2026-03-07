@@ -49,8 +49,14 @@ def test_qt_uninstaller_app_run(monkeypatch, tmp_path):
     monkeypatch.setattr("installer_framework.app.qt_uninstaller_app.QApplication", _FakeQApplication)
     monkeypatch.setattr("installer_framework.app.qt_uninstaller_app.UninstallWizard", _wizard)
 
-    app = UninstallerQtApp(manifest_file=tmp_path / "manifest.json")
+    app = UninstallerQtApp(
+        manifest_file=tmp_path / "manifest.json",
+        original_uninstaller_path=tmp_path / "tips-uninstaller.exe",
+        temp_cleanup_dir=tmp_path / "cleanup",
+    )
     result = app.run()
 
     assert result == 5
     assert created["wizard"].shown is True
+    assert created["wizard"].kwargs["original_uninstaller_path"] == tmp_path / "tips-uninstaller.exe"
+    assert created["wizard"].kwargs["temp_cleanup_dir"] == tmp_path / "cleanup"
