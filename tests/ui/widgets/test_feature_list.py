@@ -21,3 +21,14 @@ def test_feature_list_filter_and_selection(qtbot):
     widget._apply_filter("core")
     visible = [not row.isHidden() for _feature, row, _cb in widget.rows]
     assert any(visible)
+
+
+def test_feature_list_applies_explicit_background_styles(qtbot):
+    features = [FeatureConfig(id="core", label="Core", default=True)]
+    widget = FeatureListWidget(features=features)
+    qtbot.addWidget(widget)
+
+    assert "background-color" in widget.scroll.styleSheet()
+    assert "background-color" in widget.scroll.viewport().styleSheet()
+    assert "background-color" in widget.scroll_container.styleSheet()
+    assert "background-color" in widget.rows[0][1].styleSheet()

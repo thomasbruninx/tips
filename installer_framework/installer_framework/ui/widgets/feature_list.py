@@ -35,16 +35,41 @@ class FeatureListWidget(QWidget):
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll_container = QWidget()
+        self.scroll_container.setObjectName("FeatureListContainer")
         self.container_layout = QVBoxLayout(self.scroll_container)
         self.container_layout.setContentsMargins(0, 0, 0, 0)
         self.container_layout.setSpacing(4)
         self.scroll.setWidget(self.scroll_container)
-        self.scroll.setStyleSheet(f"QScrollArea {{ border: 1px solid {self.theme.border_dark}; background-color: {self.theme.panel_bg}; }}")
+        self._apply_scroll_style()
 
         root.addWidget(self.search)
         root.addWidget(self.scroll, 1)
 
         self._build_rows()
+
+    def _apply_scroll_style(self) -> None:
+        panel_bg = self.theme.panel_bg
+        border = self.theme.border_dark
+        text = self.theme.text_primary
+
+        self.scroll.setStyleSheet(
+            f"""
+            QScrollArea {{
+                border: 1px solid {border};
+                background-color: {panel_bg};
+            }}
+            QScrollArea > QWidget > QWidget {{
+                background-color: {panel_bg};
+            }}
+            QWidget#FeatureListContainer {{
+                background-color: {panel_bg};
+            }}
+            """
+        )
+        viewport = self.scroll.viewport()
+        viewport.setObjectName("FeatureListViewport")
+        viewport.setStyleSheet(f"background-color: {panel_bg};")
+        self.scroll_container.setStyleSheet(f"QWidget#FeatureListContainer {{ background-color: {panel_bg}; color: {text}; }}")
 
     def _build_rows(self) -> None:
         while self.container_layout.count():
@@ -56,6 +81,8 @@ class FeatureListWidget(QWidget):
         self.rows.clear()
         for feature in self.features:
             row = QWidget()
+            row.setObjectName("FeatureListRow")
+            row.setStyleSheet(f"QWidget#FeatureListRow {{ background-color: {self.theme.panel_bg}; color: {self.theme.text_primary}; }}")
             layout = QVBoxLayout(row)
             layout.setContentsMargins(0, 0, 0, 0)
             checkbox = QCheckBox(feature.label)
