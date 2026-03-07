@@ -259,3 +259,6 @@ python3 /path/to/install/.tips/uninstall.py --silent --delete-modified
 - `run_script` exposes only restricted helper API (`copy`, `write_config`, `log`).
 - Hook scripts execute with installer privileges; keep them trusted.
 - No network downloads are performed by the framework.
+
+## Disclaimer
+This project is provided as-is without warranties. Use at your own risk. Always test installers in safe environments before distribution. It is still in development and may contain bugs or incomplete features.
